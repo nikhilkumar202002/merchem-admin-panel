@@ -189,6 +189,8 @@ export default function AllProductsPage() {
     applications: "",
     status: "Published" as "Published" | "Draft" | "Inactive",
     displayOrder: 1,
+    tdsFile: "",
+    sdsFile: "",
     seoTitle: "",
     seoDescription: "",
   });
@@ -270,6 +272,8 @@ export default function AllProductsPage() {
       applications: "Tyres, Rubber Mouldings",
       status: "Published",
       displayOrder: products.length + 1,
+      tdsFile: "",
+      sdsFile: "",
       seoTitle: "",
       seoDescription: "",
     });
@@ -289,6 +293,8 @@ export default function AllProductsPage() {
       applications: product.applications.join(", "),
       status: product.status,
       displayOrder: product.displayOrder,
+      tdsFile: product.tdsFile || "",
+      sdsFile: product.sdsFile || "",
       seoTitle: product.seoTitle || "",
       seoDescription: product.seoDescription || "",
     });
@@ -978,26 +984,170 @@ export default function AllProductsPage() {
                   />
                 </div>
 
-                {/* Technical Documents Upload (TDS / SDS) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl border border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center space-y-2 cursor-pointer transition-colors">
-                    <Upload className="w-5 h-5 text-[#980e27] mx-auto" />
-                    <span className="text-xs font-semibold text-[#172126] block">
-                      Upload TDS (PDF)
-                    </span>
-                    <span className="text-[10px] text-[#718096] block">
-                      Technical Data Sheet
+                {/* Technical Documents Section */}
+                <div className="p-4 rounded-xl bg-[#F8FAFA] border border-[#E5E7EB] space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#980e27]" />
+                      <span className="text-xs font-bold text-[#172126] uppercase tracking-wider">
+                        Technical Documents (TDS & SDS)
+                      </span>
+                    </div>
+                    {/* TDS Availability Indicator */}
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        formData.tdsFile
+                          ? "bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/20"
+                          : "bg-[#F1F5F9] text-[#64748B] border border-[#CBD5E1]"
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          formData.tdsFile ? "bg-[#087F5B]" : "bg-[#64748B]"
+                        }`}
+                      />
+                      {formData.tdsFile ? "TDS Available" : "No TDS Uploaded"}
                     </span>
                   </div>
 
-                  <div className="p-4 rounded-xl border border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center space-y-2 cursor-pointer transition-colors">
-                    <Upload className="w-5 h-5 text-[#980e27] mx-auto" />
-                    <span className="text-xs font-semibold text-[#172126] block">
-                      Upload SDS (PDF)
-                    </span>
-                    <span className="text-[10px] text-[#718096] block">
-                      Safety Data Sheet
-                    </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* TDS PDF Card */}
+                    <div className="p-4 rounded-xl bg-white border border-[#E5E7EB] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#172126] uppercase tracking-wider">
+                          Technical Data Sheet (TDS)
+                        </span>
+                        <span className="text-[10px] text-[#718096]">Max 10MB (PDF)</span>
+                      </div>
+
+                      {formData.tdsFile ? (
+                        <div className="space-y-2">
+                          <div className="p-2.5 bg-[#FFF5F7] border border-[#980e27]/20 rounded-lg flex items-center justify-between">
+                            <div className="flex items-center gap-2 truncate">
+                              <FileText className="w-4 h-4 text-[#980e27] shrink-0" />
+                              <div className="truncate">
+                                <span className="text-xs font-semibold text-[#172126] block truncate">
+                                  {formData.tdsFile}
+                                </span>
+                                <span className="text-[10px] text-[#718096]">
+                                  v1.2 • Uploaded 28 Sep 2026
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <label className="flex-1 text-center py-1.5 px-2 bg-[#F3F5F6] hover:bg-[#E5E7EB] border border-[#DDE3E0] rounded-lg text-xs font-semibold text-[#475569] cursor-pointer transition-colors">
+                              Replace PDF
+                              <input
+                                type="file"
+                                accept="application/pdf"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) setFormData((prev) => ({ ...prev, tdsFile: f.name }));
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setFormData((prev) => ({ ...prev, tdsFile: "" }))}
+                              className="py-1.5 px-2 bg-white hover:bg-[#FFF5F5] border border-[#FEB2B2] text-[#E53E3E] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="block p-4 rounded-xl border-2 border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center cursor-pointer transition-colors">
+                          <Upload className="w-5 h-5 text-[#980e27] mx-auto mb-1" />
+                          <span className="text-xs font-semibold text-[#172126] block">
+                            Upload TDS (PDF)
+                          </span>
+                          <span className="text-[10px] text-[#718096] block">
+                            Required to enable public TDS requests
+                          </span>
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) setFormData((prev) => ({ ...prev, tdsFile: f.name }));
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+
+                    {/* SDS PDF Card */}
+                    <div className="p-4 rounded-xl bg-white border border-[#E5E7EB] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-[#172126] uppercase tracking-wider">
+                          Safety Data Sheet (SDS)
+                        </span>
+                        <span className="text-[10px] text-[#718096]">Max 10MB (PDF)</span>
+                      </div>
+
+                      {formData.sdsFile ? (
+                        <div className="space-y-2">
+                          <div className="p-2.5 bg-[#E0F2FE] border border-[#0369A1]/20 rounded-lg flex items-center justify-between">
+                            <div className="flex items-center gap-2 truncate">
+                              <FileText className="w-4 h-4 text-[#0369A1] shrink-0" />
+                              <div className="truncate">
+                                <span className="text-xs font-semibold text-[#172126] block truncate">
+                                  {formData.sdsFile}
+                                </span>
+                                <span className="text-[10px] text-[#718096]">
+                                  REACH SDS • Uploaded 20 Sep 2026
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <label className="flex-1 text-center py-1.5 px-2 bg-[#F3F5F6] hover:bg-[#E5E7EB] border border-[#DDE3E0] rounded-lg text-xs font-semibold text-[#475569] cursor-pointer transition-colors">
+                              Replace SDS
+                              <input
+                                type="file"
+                                accept="application/pdf"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) setFormData((prev) => ({ ...prev, sdsFile: f.name }));
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setFormData((prev) => ({ ...prev, sdsFile: "" }))}
+                              className="py-1.5 px-2 bg-white hover:bg-[#FFF5F5] border border-[#FEB2B2] text-[#E53E3E] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="block p-4 rounded-xl border-2 border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center cursor-pointer transition-colors">
+                          <Upload className="w-5 h-5 text-[#980e27] mx-auto mb-1" />
+                          <span className="text-xs font-semibold text-[#172126] block">
+                            Upload SDS (PDF)
+                          </span>
+                          <span className="text-[10px] text-[#718096] block">
+                            Safety Data Sheet
+                          </span>
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) setFormData((prev) => ({ ...prev, sdsFile: f.name }));
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
                   </div>
                 </div>
 
