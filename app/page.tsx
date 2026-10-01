@@ -1,9 +1,5 @@
-import React from 'react'
+import MainCategoriesPage from "./product/main-categories/page";
 
-const page = () => {
-  return (
-    <div>page</div>
-  )
+export default function Home() {
+  return <MainCategoriesPage />;
 }
-
-export default page
