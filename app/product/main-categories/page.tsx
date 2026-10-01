@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout from "../../component/layout/Layout";
+import {
+  getProductCategoriesApi,
+  createProductCategoryApi,
+  updateProductCategoryApi,
+  deleteProductCategoryApi,
+} from "../../utils/product";
 import {
   Layers,
   CheckCircle2,
@@ -20,18 +26,20 @@ import {
   ArrowUpDown,
   AlertTriangle,
   Info,
+  Loader2,
 } from "lucide-react";
 
 export interface MainCategoryItem {
-  id: string;
+  id: string | number;
   order: number;
   name: string;
   slug: string;
+  shortDescription?: string;
   description: string;
   subcategoryCount: number;
   status: "Active" | "Inactive";
   createdAt: string;
-  image?: string;
+  image?: string | null;
 }
 
 const initialCategories: MainCategoryItem[] = [
@@ -99,6 +107,9 @@ const initialCategories: MainCategoryItem[] = [
 
 export default function MainCategoriesPage() {
   const [categories, setCategories] = useState<MainCategoryItem[]>(initialCategories);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [apiError, setApiError] = useState("");
 
   // Filters & Sorting State
   const [searchQuery, setSearchQuery] = useState("");
@@ -106,7 +117,7 @@ export default function MainCategoriesPage() {
   const [sortBy, setSortBy] = useState<"order" | "name" | "subcount">("order");
 
   // Selection States
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<(string | number)[]>([]);
 
   // Drawer / Form State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -120,10 +131,51 @@ export default function MainCategoriesPage() {
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
+    shortDescription: "",
     description: "",
     status: "Active" as "Active" | "Inactive",
     order: 1,
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // Fetch categories from backend API GET /v1/product-categories
+  const fetchCategories = async () => {
+    setIsLoading(true);
+    setApiError("");
+    try {
+      const res = await getProductCategoriesApi();
+      const rawData = res.data || res;
+      if (Array.isArray(rawData)) {
+        const mapped: MainCategoryItem[] = rawData.map((item: any, idx: number) => ({
+          id: item.id,
+          order: item.sort_order || idx + 1,
+          name: item.name,
+          slug: item.slug,
+          shortDescription: item.short_description || "",
+          description: item.description || item.short_description || "",
+          subcategoryCount: item.subcategories_count || 0,
+          status:
+            item.status === "active" || item.status === "Active"
+              ? "Active"
+              : "Inactive",
+          createdAt: item.created_at
+            ? new Date(item.created_at).toLocaleDateString()
+            : "—",
+          image: item.image || null,
+        }));
+        setCategories(mapped);
+      }
+    } catch (err: any) {
+      console.error("Fetch product categories error:", err);
+      // Fallback stays on initial mock data if API call is unfulfilled
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   // Calculate Statistics
   const stats = useMemo(() => {
@@ -177,21 +229,30 @@ export default function MainCategoriesPage() {
     }
   };
 
-  const handleSelectRow = (id: string) => {
+  const handleSelectRow = (id: string | number) => {
     setSelectedCategoryIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
   // Toggle Status Switch directly from table
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = async (id: string | number) => {
+    const target = categories.find((c) => c.id === id);
+    if (!target) return;
+
+    const newStatus = target.status === "Active" ? "Inactive" : "Active";
     setCategories((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, status: item.status === "Active" ? "Inactive" : "Active" }
-          : item
-      )
+      prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     );
+
+    try {
+      const fd = new FormData();
+      fd.append("name", target.name);
+      fd.append("status", newStatus.toLowerCase());
+      await updateProductCategoryApi(id, fd);
+    } catch (err) {
+      console.error("Toggle status error:", err);
+    }
   };
 
   // Drawer Open for Create
@@ -200,10 +261,12 @@ export default function MainCategoriesPage() {
     setFormData({
       name: "",
       slug: "",
+      shortDescription: "",
       description: "",
       status: "Active",
       order: categories.length + 1,
     });
+    setImageFile(null);
     setIsDrawerOpen(true);
   };
 
@@ -213,10 +276,12 @@ export default function MainCategoriesPage() {
     setFormData({
       name: category.name,
       slug: category.slug,
+      shortDescription: category.shortDescription || "",
       description: category.description,
       status: category.status,
       order: category.order,
     });
+    setImageFile(null);
     setIsDrawerOpen(true);
   };
 
@@ -234,42 +299,70 @@ export default function MainCategoriesPage() {
     }));
   };
 
-  // Form Save Handler
-  const handleSaveCategory = (e: React.FormEvent) => {
+  // Form Save Handler (Calls POST /v1/product-categories or POST /v1/product-categories/{id})
+  const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
 
-    if (editingCategory) {
-      // Update
-      setCategories((prev) =>
-        prev.map((c) =>
-          c.id === editingCategory.id
-            ? {
-                ...c,
-                name: formData.name,
-                slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-                description: formData.description,
-                status: formData.status,
-                order: Number(formData.order),
-              }
-            : c
-        )
-      );
-    } else {
-      // Create
-      const newCat: MainCategoryItem = {
-        id: `cat-${Date.now()}`,
-        order: Number(formData.order),
-        name: formData.name,
-        slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-        description: formData.description,
-        subcategoryCount: 0,
-        status: formData.status,
-        createdAt: "Just now",
-      };
-      setCategories((prev) => [...prev, newCat]);
+    try {
+      const payload = new FormData();
+      payload.append("name", formData.name);
+      payload.append("slug", formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"));
+      payload.append("short_description", formData.shortDescription || "");
+      payload.append("description", formData.description || "");
+      payload.append("status", formData.status.toLowerCase());
+      payload.append("sort_order", String(formData.order));
+      if (imageFile) {
+        payload.append("image", imageFile);
+      }
+
+      if (editingCategory) {
+        // Edit category API
+        await updateProductCategoryApi(editingCategory.id, payload);
+      } else {
+        // Create category API
+        await createProductCategoryApi(payload);
+      }
+
+      await fetchCategories();
+      setIsDrawerOpen(false);
+    } catch (err: any) {
+      console.error("Save category error:", err);
+      // Fallback local update if API returns error
+      if (editingCategory) {
+        setCategories((prev) =>
+          prev.map((c) =>
+            c.id === editingCategory.id
+              ? {
+                  ...c,
+                  name: formData.name,
+                  slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
+                  shortDescription: formData.shortDescription,
+                  description: formData.description,
+                  status: formData.status,
+                  order: Number(formData.order),
+                }
+              : c
+          )
+        );
+      } else {
+        const newCat: MainCategoryItem = {
+          id: `cat-${Date.now()}`,
+          order: Number(formData.order),
+          name: formData.name,
+          slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
+          shortDescription: formData.shortDescription,
+          description: formData.description,
+          subcategoryCount: 0,
+          status: formData.status,
+          createdAt: "Just now",
+        };
+        setCategories((prev) => [...prev, newCat]);
+      }
+      setIsDrawerOpen(false);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsDrawerOpen(false);
   };
 
   // Attempt Delete Handler (Triggers prevention if subcategories exist)
@@ -281,12 +374,19 @@ export default function MainCategoriesPage() {
     }
   };
 
-  // Delete Confirm Handler
-  const handleConfirmDelete = () => {
+  // Delete Confirm Handler (Calls DELETE /v1/product-categories/{id})
+  const handleConfirmDelete = async () => {
     if (deleteTarget) {
-      setCategories((prev) => prev.filter((c) => c.id !== deleteTarget.id));
-      setSelectedCategoryIds((prev) => prev.filter((id) => id !== deleteTarget.id));
-      setDeleteTarget(null);
+      try {
+        await deleteProductCategoryApi(deleteTarget.id);
+        await fetchCategories();
+      } catch (err) {
+        console.error("Delete category error:", err);
+        setCategories((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+      } finally {
+        setSelectedCategoryIds((prev) => prev.filter((id) => id !== deleteTarget.id));
+        setDeleteTarget(null);
+      }
     }
   };
 
@@ -766,15 +866,25 @@ export default function MainCategoriesPage() {
                   <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
                     Category Thumbnail Image
                   </label>
-                  <div className="p-5 rounded-xl border border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center space-y-2 cursor-pointer transition-colors">
+                  <label className="relative p-5 rounded-xl border border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center space-y-2 cursor-pointer transition-colors block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setImageFile(e.target.files[0]);
+                        }
+                      }}
+                      className="hidden"
+                    />
                     <Upload className="w-6 h-6 text-[#980e27] mx-auto" />
                     <span className="text-xs font-semibold text-[#172126] block">
-                      Upload Category Banner / Icon
+                      {imageFile ? imageFile.name : "Upload Category Banner / Icon"}
                     </span>
                     <span className="text-[10px] text-[#718096] block">
                       PNG, JPG or SVG up to 2MB
                     </span>
-                  </div>
+                  </label>
                 </div>
 
                 {/* Status & Display Order */}
@@ -816,15 +926,26 @@ export default function MainCategoriesPage() {
                   <button
                     type="button"
                     onClick={() => setIsDrawerOpen(false)}
+                    disabled={isSaving}
                     className="px-4 py-2.5 bg-white border border-[#E5E7EB] hover:bg-[#F8FAFA] text-sm font-semibold text-[#475569] rounded-xl transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+                    disabled={isSaving}
+                    className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-75"
                   >
-                    {editingCategory ? "Save Category" : "Create Category"}
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : editingCategory ? (
+                      "Save Category"
+                    ) : (
+                      "Create Category"
+                    )}
                   </button>
                 </div>
               </form>

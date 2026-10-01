@@ -1,0 +1,341 @@
+import api from "./axios";
+
+/* ========================================================================= */
+/* 1. PRODUCT MAIN CATEGORIES API ENDPOINTS                                 */
+/* ========================================================================= */
+
+/**
+ * Fetch Product Main Categories
+ * GET /v1/product-categories
+ * @param {Object} params - Query parameters (page, per_page, search, status, etc.)
+ */
+export const getProductCategoriesApi = async (params = {}) => {
+  try {
+    const response = await api.get("/v1/product-categories", { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Fetch single Product Main Category by ID
+ * GET /v1/product-categories/{id}
+ * @param {number|string} id 
+ */
+export const getProductCategoryByIdApi = async (id) => {
+  try {
+    const response = await api.get(`/v1/product-categories/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Create a new Product Main Category
+ * POST /v1/product-categories
+ * @param {FormData|Object} data 
+ */
+export const createProductCategoryApi = async (data) => {
+  try {
+    let payload = data;
+    let headers = {};
+
+    if (!(data instanceof FormData)) {
+      payload = new FormData();
+      Object.keys(data).forEach((key) => {
+        if (data[key] !== null && data[key] !== undefined) {
+          payload.append(key, data[key]);
+        }
+      });
+      headers["Content-Type"] = "multipart/form-data";
+    }
+
+    const response = await api.post("/v1/product-categories", payload, { headers });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Update an existing Product Main Category
+ * POST /v1/product-categories/{id}
+ * @param {number|string} id 
+ * @param {FormData|Object} data 
+ */
+export const updateProductCategoryApi = async (id, data) => {
+  try {
+    let payload = data;
+    let headers = {};
+
+    if (!(data instanceof FormData)) {
+      payload = new FormData();
+      Object.keys(data).forEach((key) => {
+        if (data[key] !== null && data[key] !== undefined) {
+          payload.append(key, data[key]);
+        }
+      });
+      payload.append("_method", "PUT");
+      headers["Content-Type"] = "multipart/form-data";
+    }
+
+    const response = await api.post(`/v1/product-categories/${id}`, payload, { headers });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Delete a Product Main Category
+ * DELETE /v1/product-categories/{id}
+ * @param {number|string} id 
+ */
+export const deleteProductCategoryApi = async (id) => {
+  try {
+    const response = await api.delete(`/v1/product-categories/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/* ========================================================================= */
+/* 2. PRODUCT SUBCATEGORIES API ENDPOINTS                                    */
+/* ========================================================================= */
+
+/**
+ * Fetch Product Subcategories
+ * GET /v1/product-subcategories
+ * @param {Object} params - Query parameters (category_id, search, status, page, per_page, etc.)
+ */
+export const getProductSubcategoriesApi = async (params = {}) => {
+  try {
+    const response = await api.get("/v1/product-subcategories", { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Fetch single Product Subcategory by ID
+ * GET /v1/product-subcategories/{id}
+ * @param {number|string} id 
+ */
+export const getProductSubcategoryByIdApi = async (id) => {
+  try {
+    const response = await api.get(`/v1/product-subcategories/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Create a new Product Subcategory
+ * POST /v1/product-subcategories
+ * @param {FormData|Object} data 
+ */
+export const createProductSubcategoryApi = async (data) => {
+  try {
+    let payload = data;
+    let headers = {};
+
+    if (data instanceof FormData) {
+      headers["Content-Type"] = "multipart/form-data";
+    }
+
+    const response = await api.post("/v1/product-subcategories", payload, { headers });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Update an existing Product Subcategory
+ * PUT /v1/product-subcategories/{id} or POST with _method PUT
+ * @param {number|string} id 
+ * @param {FormData|Object} data 
+ */
+export const updateProductSubcategoryApi = async (id, data) => {
+  try {
+    if (data instanceof FormData) {
+      data.append("_method", "PUT");
+      const response = await api.post(`/v1/product-subcategories/${id}`, data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    }
+
+    const response = await api.put(`/v1/product-subcategories/${id}`, data);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Delete a Product Subcategory
+ * DELETE /v1/product-subcategories/{id}
+ * @param {number|string} id 
+ */
+export const deleteProductSubcategoryApi = async (id) => {
+  try {
+    const response = await api.delete(`/v1/product-subcategories/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/* ========================================================================= */
+/* 3. PRODUCTS API ENDPOINTS                                                 */
+/* ========================================================================= */
+
+/**
+ * Fetch Products List
+ * GET /v1/products
+ * @param {Object} params - (search, category_id, subcategory_id, status, sort_by, sort_order, page, per_page)
+ */
+export const getProductsApi = async (params = {}) => {
+  try {
+    const response = await api.get("/v1/products", { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Fetch Single Product Details by ID
+ * GET /v1/products/{id}
+ * @param {number|string} id 
+ */
+export const getProductByIdApi = async (id) => {
+  try {
+    const response = await api.get(`/v1/products/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Create a new Chemical Product
+ * POST /v1/products (multipart/form-data)
+ * @param {FormData|Object} data 
+ */
+export const createProductApi = async (data) => {
+  try {
+    let payload = data;
+    let headers = {};
+
+    if (!(data instanceof FormData)) {
+      payload = new FormData();
+      Object.keys(data).forEach((key) => {
+        if (data[key] !== null && data[key] !== undefined) {
+          payload.append(key, data[key]);
+        }
+      });
+      headers["Content-Type"] = "multipart/form-data";
+    }
+
+    const response = await api.post("/v1/products", payload, { headers });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Update an existing Chemical Product
+ * POST /v1/products/{id} (with _method: PUT for multipart/form-data)
+ * @param {number|string} id 
+ * @param {FormData|Object} data 
+ */
+export const updateProductApi = async (id, data) => {
+  try {
+    let payload = data;
+    let headers = {};
+
+    if (!(data instanceof FormData)) {
+      payload = new FormData();
+      Object.keys(data).forEach((key) => {
+        if (data[key] !== null && data[key] !== undefined) {
+          payload.append(key, data[key]);
+        }
+      });
+      payload.append("_method", "PUT");
+      headers["Content-Type"] = "multipart/form-data";
+    }
+
+    const response = await api.post(`/v1/products/${id}`, payload, { headers });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Delete a Chemical Product
+ * DELETE /v1/products/{id}
+ * @param {number|string} id 
+ */
+export const deleteProductApi = async (id) => {
+  try {
+    const response = await api.delete(`/v1/products/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/* ========================================================================= */
+/* 4. PRODUCT TDS DOCUMENT API ENDPOINTS                                     */
+/* ========================================================================= */
+
+/**
+ * Upload TDS Document for a Product
+ * POST /v1/products/{id}/tds (multipart/form-data)
+ * @param {number|string} productId 
+ * @param {FormData|Object} data - { version: "1.0", tds_document: File }
+ */
+export const uploadProductTdsApi = async (productId, data) => {
+  try {
+    let payload = data;
+    let headers = {};
+
+    if (!(data instanceof FormData)) {
+      payload = new FormData();
+      Object.keys(data).forEach((key) => {
+        if (data[key] !== null && data[key] !== undefined) {
+          payload.append(key, data[key]);
+        }
+      });
+      headers["Content-Type"] = "multipart/form-data";
+    }
+
+    const response = await api.post(`/v1/products/${productId}/tds`, payload, { headers });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Delete TDS Document for a Product
+ * DELETE /v1/products/{id}/tds
+ * @param {number|string} productId 
+ */
+export const deleteProductTdsApi = async (productId) => {
+  try {
+    const response = await api.delete(`/v1/products/${productId}/tds`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};

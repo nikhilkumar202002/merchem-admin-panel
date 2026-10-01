@@ -14,6 +14,9 @@ import {
   X,
 } from "lucide-react";
 
+import { useRouter } from "next/navigation";
+import { getMeApi, logoutApi, getStoredUser } from "@/app/utils/auth";
+
 interface HeaderProps {
   onToggleMobileSidebar?: () => void;
   userName?: string;
@@ -51,16 +54,50 @@ const mockNotifications: NotificationItem[] = [
 
 const Header: React.FC<HeaderProps> = ({
   onToggleMobileSidebar,
-  userName = "Nikhil Kumar",
-  userRole = "Administrator",
-  userInitials = "NK",
+  userName: defaultName = "Nikhil Kumar",
+  userRole: defaultRole = "Administrator",
+  userInitials: defaultInitials = "NK",
 }) => {
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
+
+  // Fetch logged in user via /v1/auth/me
+  useEffect(() => {
+    const stored = getStoredUser();
+    if (stored) {
+      setCurrentUser(stored);
+    }
+
+    getMeApi()
+      .then((res: any) => {
+        const u = res.user || res.data?.user || res;
+        if (u) setCurrentUser(u);
+      })
+      .catch((err) => {
+        // Silent error fallback
+      });
+  }, []);
+
+  const handleLogout = async () => {
+    setIsProfileOpen(false);
+    await logoutApi();
+    router.push("/login");
+  };
+
+  const displayName = currentUser?.name || currentUser?.email || defaultName;
+  const displayRole = currentUser?.role || defaultRole;
+  const displayInitials = displayName
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase() || defaultInitials;
 
   // Close dropdowns on click outside
   useEffect(() => {
@@ -230,16 +267,16 @@ const Header: React.FC<HeaderProps> = ({
           >
             {/* Avatar Circle */}
             <div className="w-9 h-9 rounded-full bg-[#FFF5F7] text-[#980e27] font-semibold text-[14px] flex items-center justify-center border border-[#980e27]/20 shrink-0">
-              {userInitials}
+              {displayInitials}
             </div>
 
             {/* Name and Role (Desktop/Tablet) */}
             <div className="hidden sm:flex flex-col text-left">
               <span className="text-[14px] font-medium text-[#172126] leading-tight">
-                {userName}
+                {displayName}
               </span>
               <span className="text-[12px] font-normal text-[#718096] leading-tight">
-                {userRole}
+                {displayRole}
               </span>
             </div>
 
@@ -256,9 +293,9 @@ const Header: React.FC<HeaderProps> = ({
             <div className="absolute right-0 mt-2 w-[220px] bg-white rounded-xl shadow-lg border border-[#E5E7EB] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="px-4 py-2.5 border-b border-[#E5E7EB] sm:hidden">
                 <p className="text-[14px] font-medium text-[#172126]">
-                  {userName}
+                  {displayName}
                 </p>
-                <p className="text-[12px] text-[#718096]">{userRole}</p>
+                <p className="text-[12px] text-[#718096]">{displayRole}</p>
               </div>
 
               <div className="py-1">
@@ -292,7 +329,7 @@ const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   className="w-full px-4 py-2 text-left text-[14px] text-[#980e27] hover:bg-[#FFF5F7] flex items-center gap-2.5 transition-colors cursor-pointer font-medium"
-                  onClick={() => setIsProfileOpen(false)}
+                  onClick={handleLogout}
                 >
                   <LogOut className="w-4 h-4 text-[#980e27]" />
                   Logout

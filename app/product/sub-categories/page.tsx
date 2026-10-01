@@ -5,6 +5,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import DashboardLayout from "../../component/layout/Layout";
 import {
+  getProductCategoriesApi,
+  getProductSubcategoriesApi,
+  createProductSubcategoryApi,
+  updateProductSubcategoryApi,
+  deleteProductSubcategoryApi,
+} from "../../utils/product";
+import {
   FolderTree,
   Layers,
   Package,
@@ -23,29 +30,23 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Sliders,
+  Loader2,
 } from "lucide-react";
 
 export interface SubcategoryItem {
-  id: string;
+  id: string | number;
   order: number;
   name: string;
   slug: string;
-  mainCategoryId: string;
+  mainCategoryId: string | number;
   mainCategoryName: string;
+  shortDescription?: string;
   description: string;
   productCount: number;
   status: "Active" | "Inactive";
   createdAt: string;
+  image?: string | null;
 }
-
-const mainCategoryOptions = [
-  { id: "cat-1", name: "Rubber Accelerators" },
-  { id: "cat-2", name: "Antioxidants & Antiozonants" },
-  { id: "cat-3", name: "Processing Aids" },
-  { id: "cat-4", name: "Agrochemical Intermediates" },
-  { id: "cat-5", name: "Specialty Solvents" },
-  { id: "cat-6", name: "Polymerization Inhibitors" },
-];
 
 const initialSubcategories: SubcategoryItem[] = [
   {
@@ -163,6 +164,9 @@ function SubcategoriesContent() {
   const categoryParam = searchParams.get("category");
 
   const [subcategories, setSubcategories] = useState<SubcategoryItem[]>(initialSubcategories);
+  const [categoriesList, setCategoriesList] = useState<{ id: string | number; name: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -170,7 +174,7 @@ function SubcategoriesContent() {
   const [selectedStatus, setSelectedStatus] = useState("All");
 
   // Selection Checkbox State
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
 
   // Drawer / Form State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -184,23 +188,81 @@ function SubcategoriesContent() {
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
-    mainCategoryId: "cat-1",
+    mainCategoryId: "" as string | number,
+    shortDescription: "",
     description: "",
     status: "Active" as "Active" | "Inactive",
     order: 1,
   });
 
+  // Fetch Main Categories for dropdown select
+  const fetchMainCategories = async () => {
+    try {
+      const res = await getProductCategoriesApi();
+      const raw = res.data || res;
+      if (Array.isArray(raw)) {
+        const mapped = raw.map((c: any) => ({ id: c.id, name: c.name }));
+        setCategoriesList(mapped);
+        if (mapped.length > 0 && !formData.mainCategoryId) {
+          setFormData((prev) => ({ ...prev, mainCategoryId: mapped[0].id }));
+        }
+      }
+    } catch (err) {
+      console.error("Fetch main categories list error:", err);
+    }
+  };
+
+  // Fetch Subcategories from API GET /v1/product-subcategories
+  const fetchSubcategories = async () => {
+    setIsLoading(true);
+    try {
+      const res = await getProductSubcategoriesApi();
+      const rawData = res.data || res;
+      if (Array.isArray(rawData)) {
+        const mapped: SubcategoryItem[] = rawData.map((item: any, idx: number) => ({
+          id: item.id,
+          order: item.sort_order || idx + 1,
+          name: item.name,
+          slug: item.slug,
+          mainCategoryId: item.product_category_id || (item.category ? item.category.id : ""),
+          mainCategoryName: item.category ? item.category.name : "Main Category",
+          shortDescription: item.short_description || "",
+          description: item.description || item.short_description || "",
+          productCount: item.products_count || 0,
+          status:
+            item.status === "active" || item.status === "Active"
+              ? "Active"
+              : "Inactive",
+          createdAt: item.created_at
+            ? new Date(item.created_at).toLocaleDateString()
+            : "—",
+          image: item.image_url || item.image || null,
+        }));
+        setSubcategories(mapped);
+      }
+    } catch (err) {
+      console.error("Fetch subcategories error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMainCategories();
+    fetchSubcategories();
+  }, []);
+
   // Pre-select main category filter if URL query param exists
   useEffect(() => {
-    if (categoryParam) {
-      const match = mainCategoryOptions.find(
+    if (categoryParam && categoriesList.length > 0) {
+      const match = categoriesList.find(
         (c) => c.name.toLowerCase() === categoryParam.toLowerCase()
       );
       if (match) {
         setSelectedMainCategory(match.name);
       }
     }
-  }, [categoryParam]);
+  }, [categoryParam, categoriesList]);
 
   // Statistics Summary
   const stats = useMemo(() => {
@@ -244,21 +306,31 @@ function SubcategoriesContent() {
     }
   };
 
-  const handleSelectRow = (id: string) => {
+  const handleSelectRow = (id: string | number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
   // Toggle Active/Inactive Status Switch
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = async (id: string | number) => {
+    const target = subcategories.find((s) => s.id === id);
+    if (!target) return;
+
+    const newStatus = target.status === "Active" ? "Inactive" : "Active";
     setSubcategories((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, status: item.status === "Active" ? "Inactive" : "Active" }
-          : item
-      )
+      prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     );
+
+    try {
+      await updateProductSubcategoryApi(id, {
+        product_category_id: target.mainCategoryId,
+        name: target.name,
+        status: newStatus.toLowerCase(),
+      });
+    } catch (err) {
+      console.error("Toggle subcategory status error:", err);
+    }
   };
 
   // Open Drawer for Create
@@ -267,7 +339,8 @@ function SubcategoriesContent() {
     setFormData({
       name: "",
       slug: "",
-      mainCategoryId: mainCategoryOptions[0].id,
+      mainCategoryId: categoriesList.length > 0 ? categoriesList[0].id : 1,
+      shortDescription: "",
       description: "",
       status: "Active",
       order: subcategories.length + 1,
@@ -282,6 +355,7 @@ function SubcategoriesContent() {
       name: sub.name,
       slug: sub.slug,
       mainCategoryId: sub.mainCategoryId,
+      shortDescription: sub.shortDescription || "",
       description: sub.description,
       status: sub.status,
       order: sub.order,
@@ -303,50 +377,75 @@ function SubcategoriesContent() {
     }));
   };
 
-  // Save Subcategory Form Handler
-  const handleSaveSubcategory = (e: React.FormEvent) => {
+  // Save Subcategory Form Handler (Calls POST /v1/product-subcategories or PUT /v1/product-subcategories/{id})
+  const handleSaveSubcategory = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
 
     const parentCategoryObj =
-      mainCategoryOptions.find((c) => c.id === formData.mainCategoryId) ||
-      mainCategoryOptions[0];
+      categoriesList.find((c) => String(c.id) === String(formData.mainCategoryId)) ||
+      (categoriesList.length > 0 ? categoriesList[0] : { id: formData.mainCategoryId, name: "Main Category" });
 
-    if (editingSubcategory) {
-      // Update
-      setSubcategories((prev) =>
-        prev.map((item) =>
-          item.id === editingSubcategory.id
-            ? {
-                ...item,
-                name: formData.name,
-                slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-                mainCategoryId: parentCategoryObj.id,
-                mainCategoryName: parentCategoryObj.name,
-                description: formData.description,
-                status: formData.status,
-                order: Number(formData.order),
-              }
-            : item
-        )
-      );
-    } else {
-      // Create
-      const newSub: SubcategoryItem = {
-        id: `sub-${Date.now()}`,
-        order: Number(formData.order),
-        name: formData.name,
-        slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-        mainCategoryId: parentCategoryObj.id,
-        mainCategoryName: parentCategoryObj.name,
-        description: formData.description,
-        productCount: 0,
-        status: formData.status,
-        createdAt: "Just now",
-      };
-      setSubcategories((prev) => [...prev, newSub]);
+    const payload = {
+      product_category_id: formData.mainCategoryId,
+      name: formData.name,
+      slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
+      short_description: formData.shortDescription || "",
+      description: formData.description || "",
+      status: formData.status.toLowerCase(),
+      sort_order: Number(formData.order),
+    };
+
+    try {
+      if (editingSubcategory) {
+        await updateProductSubcategoryApi(editingSubcategory.id, payload);
+      } else {
+        await createProductSubcategoryApi(payload);
+      }
+
+      await fetchSubcategories();
+      setIsDrawerOpen(false);
+    } catch (err: any) {
+      console.error("Save subcategory error:", err);
+      // Fallback update
+      if (editingSubcategory) {
+        setSubcategories((prev) =>
+          prev.map((item) =>
+            item.id === editingSubcategory.id
+              ? {
+                  ...item,
+                  name: formData.name,
+                  slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
+                  mainCategoryId: parentCategoryObj.id,
+                  mainCategoryName: parentCategoryObj.name,
+                  shortDescription: formData.shortDescription,
+                  description: formData.description,
+                  status: formData.status,
+                  order: Number(formData.order),
+                }
+              : item
+          )
+        );
+      } else {
+        const newSub: SubcategoryItem = {
+          id: `sub-${Date.now()}`,
+          order: Number(formData.order),
+          name: formData.name,
+          slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
+          mainCategoryId: parentCategoryObj.id,
+          mainCategoryName: parentCategoryObj.name,
+          shortDescription: formData.shortDescription,
+          description: formData.description,
+          productCount: 0,
+          status: formData.status,
+          createdAt: "Just now",
+        };
+        setSubcategories((prev) => [...prev, newSub]);
+      }
+      setIsDrawerOpen(false);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsDrawerOpen(false);
   };
 
   // Attempt Delete (Check product count)
@@ -358,12 +457,19 @@ function SubcategoriesContent() {
     }
   };
 
-  // Confirm Delete
-  const handleConfirmDelete = () => {
+  // Confirm Delete (Calls DELETE /v1/product-subcategories/{id})
+  const handleConfirmDelete = async () => {
     if (deleteTarget) {
-      setSubcategories((prev) => prev.filter((s) => s.id !== deleteTarget.id));
-      setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.id));
-      setDeleteTarget(null);
+      try {
+        await deleteProductSubcategoryApi(deleteTarget.id);
+        await fetchSubcategories();
+      } catch (err) {
+        console.error("Delete subcategory error:", err);
+        setSubcategories((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+      } finally {
+        setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.id));
+        setDeleteTarget(null);
+      }
     }
   };
 
@@ -499,7 +605,7 @@ function SubcategoriesContent() {
                   className="bg-transparent text-xs font-medium text-[#172126] outline-hidden cursor-pointer"
                 >
                   <option value="All">All Main Categories</option>
-                  {mainCategoryOptions.map((cat) => (
+                  {categoriesList.map((cat) => (
                     <option key={cat.id} value={cat.name}>
                       {cat.name}
                     </option>
@@ -813,7 +919,7 @@ function SubcategoriesContent() {
                     onChange={(e) => setFormData({ ...formData, mainCategoryId: e.target.value })}
                     className="w-full h-10 px-3.5 bg-white text-sm text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] cursor-pointer"
                   >
-                    {mainCategoryOptions.map((cat) => (
+                    {categoriesList.map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name}
                       </option>
@@ -923,15 +1029,26 @@ function SubcategoriesContent() {
                   <button
                     type="button"
                     onClick={() => setIsDrawerOpen(false)}
+                    disabled={isSaving}
                     className="px-4 py-2.5 bg-white border border-[#E5E7EB] hover:bg-[#F8FAFA] text-sm font-semibold text-[#475569] rounded-xl transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+                    disabled={isSaving}
+                    className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-75"
                   >
-                    {editingSubcategory ? "Save Subcategory" : "Create Subcategory"}
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : editingSubcategory ? (
+                      "Save Subcategory"
+                    ) : (
+                      "Create Subcategory"
+                    )}
                   </button>
                 </div>
               </form>

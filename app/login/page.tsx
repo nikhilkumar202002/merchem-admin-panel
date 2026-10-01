@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { isAuthenticated } from "@/app/utils/auth";
 import {
   Mail,
   Lock,
@@ -26,6 +27,13 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Auto redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated()) {
+      router.replace("/dashboard");
+    }
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
@@ -44,18 +52,22 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Simulate Backend Authentication API Request
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      // Call actual backend authentication API: POST /v1/auth/login
+      const { loginApi } = await import("@/app/utils/auth");
+      await loginApi({ email, password });
 
-      // Demo credential validation
       setIsSuccess(true);
-      
-      // Redirect after brief success feedback
+
+      // Smooth full navigation into dashboard
       setTimeout(() => {
-        router.push("/");
-      }, 600);
-    } catch (err) {
-      setErrorMessage("Incorrect login credentials. Please try again.");
+        window.location.href = "/dashboard";
+      }, 500);
+    } catch (err: any) {
+      const msg =
+        err?.message ||
+        err?.error ||
+        "Incorrect login credentials or server unreachable. Please try again.";
+      setErrorMessage(msg);
       setIsLoading(false);
     }
   };

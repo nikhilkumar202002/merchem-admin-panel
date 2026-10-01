@@ -1,8 +1,18 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout from "../../component/layout/Layout";
+import {
+  getProductCategoriesApi,
+  getProductSubcategoriesApi,
+  getProductsApi,
+  createProductApi,
+  updateProductApi,
+  deleteProductApi,
+  uploadProductTdsApi,
+  deleteProductTdsApi,
+} from "../../utils/product";
 import {
   Package,
   CheckCircle2,
@@ -25,22 +35,29 @@ import {
   Globe,
   Sliders,
   Sparkles,
+  Loader2,
+  FileUp,
 } from "lucide-react";
 
 // Types
 export interface ProductItem {
-  id: string;
+  id: string | number;
   name: string;
   slug: string;
   mainCategory: string;
+  mainCategoryId?: string | number;
   subcategory: string;
+  subcategoryId?: string | number;
   shortDescription: string;
   fullDescription: string;
   applications: string[];
   status: "Published" | "Draft" | "Inactive";
   lastUpdated: string;
   displayOrder: number;
-  tdsFile?: string;
+  image?: string | null;
+  tdsFile?: string | null;
+  tdsVersion?: string | null;
+  tdsAvailable?: boolean;
   sdsFile?: string;
   seoTitle?: string;
   seoDescription?: string;
@@ -160,6 +177,10 @@ const initialProducts: ProductItem[] = [
 
 export default function AllProductsPage() {
   const [products, setProducts] = useState<ProductItem[]>(initialProducts);
+  const [subcategoriesList, setSubcategoriesList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -167,21 +188,22 @@ export default function AllProductsPage() {
   const [selectedSubcategory, setSelectedSubcategory] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState("All");
 
-  // Selection & Selection States
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  // Selection States
+  const [selectedProductIds, setSelectedProductIds] = useState<(string | number)[]>([]);
 
   // Drawer / Form State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
 
   // Delete Dialog State
-  const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
+  const [deleteModalId, setDeleteModalId] = useState<string | number | null>(null);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
   // Form Fields State
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
+    subcategoryId: "" as string | number,
     subcategory: "",
     mainCategory: "",
     shortDescription: "",
@@ -189,37 +211,120 @@ export default function AllProductsPage() {
     applications: "",
     status: "Published" as "Published" | "Draft" | "Inactive",
     displayOrder: 1,
-    tdsFile: "",
-    sdsFile: "",
     seoTitle: "",
     seoDescription: "",
+    tdsFile: "",
   });
+
+  // File states for drawer upload
+  const [productImageFile, setProductImageFile] = useState<File | null>(null);
+  const [tdsPdfFile, setTdsPdfFile] = useState<File | null>(null);
+  const [tdsVersionInput, setTdsVersionInput] = useState("1.0");
+
+  // Fetch Subcategories for dropdown select
+  const fetchSubcategoriesList = async () => {
+    try {
+      const res = await getProductSubcategoriesApi();
+      const raw = res.data || res;
+      if (Array.isArray(raw)) {
+        const mapped = raw.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          mainCategoryId: s.product_category_id || (s.category ? s.category.id : ""),
+          mainCategoryName: s.category ? s.category.name : "Main Category",
+        }));
+        setSubcategoriesList(mapped);
+      }
+    } catch (err) {
+      console.error("Fetch subcategories list error:", err);
+    }
+  };
+
+  // Fetch Products from API GET /v1/products
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const res = await getProductsApi();
+      const rawData = res.data || res;
+      if (Array.isArray(rawData)) {
+        const mapped: ProductItem[] = rawData.map((item: any, idx: number) => ({
+          id: item.id,
+          name: item.name,
+          slug: item.slug,
+          subcategoryId: item.product_subcategory_id || (item.subcategory ? item.subcategory.id : ""),
+          subcategory: item.subcategory ? item.subcategory.name : "Subcategory",
+          mainCategory: item.subcategory?.category ? item.subcategory.category.name : "Main Category",
+          shortDescription: item.short_description || "",
+          fullDescription: item.description || item.short_description || "",
+          applications: item.applications
+            ? Array.isArray(item.applications)
+              ? item.applications
+              : String(item.applications).split(",").map((a) => a.trim())
+            : [],
+          status:
+            item.status === "active" || item.status === "Active"
+              ? "Published"
+              : "Draft",
+          lastUpdated: item.updated_at
+            ? new Date(item.updated_at).toLocaleDateString()
+            : "—",
+          displayOrder: item.sort_order || idx + 1,
+          image: item.image || null,
+          tdsFile: item.tds_document || item.tds_document_name || null,
+          tdsVersion: item.tds_document_version || null,
+          tdsAvailable: item.tds?.available || false,
+          seoTitle: item.seo_title || "",
+          seoDescription: item.seo_description || "",
+        }));
+        setProducts(mapped);
+      }
+    } catch (err) {
+      console.error("Fetch products error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubcategoriesList();
+    fetchProducts();
+  }, []);
 
   // Calculate Subcategory list based on selected Main Category in Filter bar
   const filterSubcategoryOptions = useMemo(() => {
+    let list: string[] = [];
     if (selectedMainCategory === "All") {
-      return Object.values(CATEGORY_MAP).flatMap((c) => c.subs);
+      list = subcategoriesList.map((s) => s.name);
+    } else {
+      list = subcategoriesList
+        .filter((s) => s.mainCategoryName === selectedMainCategory)
+        .map((s) => s.name);
     }
-    return CATEGORY_MAP[selectedMainCategory]?.subs || [];
-  }, [selectedMainCategory]);
+    return Array.from(new Set(list));
+  }, [selectedMainCategory, subcategoriesList]);
+
+  // Main Categories list for Toolbar filter
+  const filterMainCategoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    subcategoriesList.forEach((s) => {
+      if (s.mainCategoryName) set.add(s.mainCategoryName);
+    });
+    return Array.from(set);
+  }, [subcategoriesList]);
 
   // Derived filtered products list
   const filteredProducts = useMemo(() => {
     return products.filter((item) => {
-      // Search by Name or Slug
       const matchesSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.slug.toLowerCase().includes(searchQuery.toLowerCase());
 
-      // Main Category Filter
       const matchesMainCat =
         selectedMainCategory === "All" || item.mainCategory === selectedMainCategory;
 
-      // Subcategory Filter
       const matchesSubCat =
         selectedSubcategory === "All" || item.subcategory === selectedSubcategory;
 
-      // Status Filter
       const matchesStatus =
         selectedStatus === "All" || item.status === selectedStatus;
 
@@ -253,7 +358,7 @@ export default function AllProductsPage() {
     }
   };
 
-  const handleSelectRow = (id: string) => {
+  const handleSelectRow = (id: string | number) => {
     setSelectedProductIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
@@ -262,21 +367,28 @@ export default function AllProductsPage() {
   // Open Drawer for Create
   const handleOpenCreateDrawer = () => {
     setEditingProduct(null);
+    const defaultSubId = subcategoriesList.length > 0 ? subcategoriesList[0].id : 1;
+    const defaultSubName = subcategoriesList.length > 0 ? subcategoriesList[0].name : "Subcategory";
+    const defaultMainName = subcategoriesList.length > 0 ? subcategoriesList[0].mainCategoryName : "Main Category";
+
     setFormData({
       name: "",
       slug: "",
-      subcategory: "Thiazoles",
-      mainCategory: "Rubber Accelerators",
+      subcategoryId: defaultSubId,
+      subcategory: defaultSubName,
+      mainCategory: defaultMainName,
       shortDescription: "",
       fullDescription: "",
-      applications: "Tyres, Rubber Mouldings",
+      applications: "Tyres, Conveyor Belts, Footwear",
       status: "Published",
       displayOrder: products.length + 1,
-      tdsFile: "",
-      sdsFile: "",
       seoTitle: "",
       seoDescription: "",
+      tdsFile: "",
     });
+    setProductImageFile(null);
+    setTdsPdfFile(null);
+    setTdsVersionInput("1.0");
     setIsDrawerOpen(true);
   };
 
@@ -286,38 +398,38 @@ export default function AllProductsPage() {
     setFormData({
       name: product.name,
       slug: product.slug,
+      subcategoryId: product.subcategoryId || (subcategoriesList.length > 0 ? subcategoriesList[0].id : 1),
       subcategory: product.subcategory,
       mainCategory: product.mainCategory,
       shortDescription: product.shortDescription,
       fullDescription: product.fullDescription,
-      applications: product.applications.join(", "),
+      applications: Array.isArray(product.applications)
+        ? product.applications.join(", ")
+        : product.applications,
       status: product.status,
       displayOrder: product.displayOrder,
-      tdsFile: product.tdsFile || "",
-      sdsFile: product.sdsFile || "",
       seoTitle: product.seoTitle || "",
       seoDescription: product.seoDescription || "",
+      tdsFile: product.tdsFile || "",
     });
+    setProductImageFile(null);
+    setTdsPdfFile(null);
+    setTdsVersionInput(product.tdsVersion || "1.0");
     setIsDrawerOpen(true);
   };
 
-  // Subcategory Change Handler in Form (Auto-derives Main Category)
-  const handleFormSubcategoryChange = (sub: string) => {
-    let derivedMain = "";
-    for (const key in CATEGORY_MAP) {
-      if (CATEGORY_MAP[key].subs.includes(sub)) {
-        derivedMain = CATEGORY_MAP[key].main;
-        break;
-      }
-    }
+  // Subcategory Change Handler in Form
+  const handleFormSubcategoryChange = (subIdVal: string | number) => {
+    const subObj = subcategoriesList.find((s) => String(s.id) === String(subIdVal));
     setFormData((prev) => ({
       ...prev,
-      subcategory: sub,
-      mainCategory: derivedMain,
+      subcategoryId: subIdVal,
+      subcategory: subObj ? subObj.name : prev.subcategory,
+      mainCategory: subObj ? subObj.mainCategoryName : prev.mainCategory,
     }));
   };
 
-  // Name Change in Form (Auto-generates Slug if empty or matching)
+  // Name Change in Form (Auto-generates Slug)
   const handleFormNameChange = (name: string) => {
     const slugified = name
       .toLowerCase()
@@ -331,80 +443,123 @@ export default function AllProductsPage() {
     }));
   };
 
-  // Save Product Handler (Create / Update)
-  const handleSaveProduct = (e: React.FormEvent) => {
+  // Save Product Handler (Calls POST /v1/products or POST /v1/products/{id} + TDS upload)
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
 
-    const formattedApps = formData.applications
-      .split(",")
-      .map((a) => a.trim())
-      .filter(Boolean);
+    try {
+      const payload = new FormData();
+      payload.append("name", formData.name);
+      payload.append("slug", formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"));
+      payload.append("product_subcategory_id", String(formData.subcategoryId || 1));
+      payload.append("short_description", formData.shortDescription || "");
+      payload.append("description", formData.fullDescription || "");
+      payload.append("applications", formData.applications || "");
+      payload.append("status", formData.status === "Published" ? "active" : "inactive");
+      payload.append("sort_order", String(formData.displayOrder));
+      payload.append("seo_title", formData.seoTitle || `${formData.name} | Merchem India`);
+      payload.append("seo_description", formData.seoDescription || formData.shortDescription || "");
 
-    if (editingProduct) {
-      // Update existing
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === editingProduct.id
-            ? {
-                ...p,
-                name: formData.name,
-                slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-                subcategory: formData.subcategory,
-                mainCategory: formData.mainCategory,
-                shortDescription: formData.shortDescription,
-                fullDescription: formData.fullDescription,
-                applications: formattedApps,
-                status: formData.status,
-                displayOrder: Number(formData.displayOrder),
-                lastUpdated: "Just now",
-              }
-            : p
-        )
-      );
-    } else {
-      // Create new
-      const newProd: ProductItem = {
-        id: `prod-${Date.now()}`,
-        name: formData.name,
-        slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-        subcategory: formData.subcategory || "Thiazoles",
-        mainCategory: formData.mainCategory || "Rubber Accelerators",
-        shortDescription: formData.shortDescription,
-        fullDescription: formData.fullDescription,
-        applications: formattedApps,
-        status: formData.status,
-        lastUpdated: "Just now",
-        displayOrder: Number(formData.displayOrder),
-      };
-      setProducts((prev) => [newProd, ...prev]);
+      if (productImageFile) {
+        payload.append("image", productImageFile);
+      }
+
+      let savedProductRes: any;
+      if (editingProduct) {
+        savedProductRes = await updateProductApi(editingProduct.id, payload);
+      } else {
+        savedProductRes = await createProductApi(payload);
+      }
+
+      const createdId = savedProductRes?.data?.id || (editingProduct ? editingProduct.id : null);
+
+      // Handle optional TDS PDF file upload if provided
+      if (createdId && tdsPdfFile) {
+        const tdsFormData = new FormData();
+        tdsFormData.append("version", tdsVersionInput || "1.0");
+        tdsFormData.append("tds_document", tdsPdfFile);
+        await uploadProductTdsApi(createdId, tdsFormData);
+      }
+
+      await fetchProducts();
+      setIsDrawerOpen(false);
+    } catch (err: any) {
+      console.error("Save product error:", err);
+      setIsDrawerOpen(false);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsDrawerOpen(false);
   };
 
-  // Delete Single Product
-  const handleDeleteConfirm = () => {
-    if (deleteModalId) {
-      setProducts((prev) => prev.filter((p) => p.id !== deleteModalId));
-      setSelectedProductIds((prev) => prev.filter((id) => id !== deleteModalId));
+  // Delete Single Product (Calls DELETE /v1/products/{id})
+  const handleDeleteConfirm = async () => {
+    if (deleteModalId === null || deleteModalId === undefined) return;
+    const targetId = deleteModalId;
+    setIsDeleting(true);
+
+    const isMockId = typeof targetId === "string" && targetId.startsWith("prod-");
+
+    try {
+      if (!isMockId) {
+        await deleteProductApi(targetId);
+      }
+    } catch (err) {
+      console.error("Delete product error:", err);
+    } finally {
+      setProducts((prev) => prev.filter((p) => String(p.id) !== String(targetId)));
+      setSelectedProductIds((prev) => prev.filter((id) => String(id) !== String(targetId)));
       setDeleteModalId(null);
+      setIsDeleting(false);
+      if (!isMockId) {
+        fetchProducts();
+      }
     }
   };
 
   // Bulk Delete Confirm
-  const handleBulkDeleteConfirm = () => {
-    setProducts((prev) => prev.filter((p) => !selectedProductIds.includes(p.id)));
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedProductIds.length === 0) return;
+    setIsDeleting(true);
+    const idsToDelete = [...selectedProductIds];
+    let hasRealIds = false;
+
+    for (const id of idsToDelete) {
+      const isMockId = typeof id === "string" && id.startsWith("prod-");
+      if (!isMockId) {
+        hasRealIds = true;
+        try {
+          await deleteProductApi(id);
+        } catch (err) {
+          console.error(`Bulk delete error for id ${id}:`, err);
+        }
+      }
+    }
+    setProducts((prev) => prev.filter((p) => !idsToDelete.map(String).includes(String(p.id))));
     setSelectedProductIds([]);
     setIsBulkDeleteModalOpen(false);
+    setIsDeleting(false);
+    if (hasRealIds) {
+      fetchProducts();
+    }
   };
 
   // Bulk Status Update
-  const handleBulkStatusUpdate = (status: "Published" | "Draft" | "Inactive") => {
-    setProducts((prev) =>
-      prev.map((p) =>
-        selectedProductIds.includes(p.id) ? { ...p, status, lastUpdated: "Just now" } : p
-      )
-    );
+  const handleBulkStatusUpdate = async (status: "Published" | "Draft" | "Inactive") => {
+    for (const id of selectedProductIds) {
+      const prod = products.find((p) => p.id === id);
+      if (prod) {
+        try {
+          const fd = new FormData();
+          fd.append("name", prod.name);
+          fd.append("status", status === "Published" ? "active" : "inactive");
+          await updateProductApi(id, fd);
+        } catch (err) {
+          console.error("Bulk status update error:", err);
+        }
+      }
+    }
+    await fetchProducts();
     setSelectedProductIds([]);
   };
 
@@ -543,8 +698,8 @@ export default function AllProductsPage() {
                   className="bg-transparent text-xs font-medium text-[#172126] outline-hidden cursor-pointer"
                 >
                   <option value="All">All Main Categories</option>
-                  {Object.keys(CATEGORY_MAP).map((cat) => (
-                    <option key={cat} value={cat}>
+                  {filterMainCategoryOptions.map((cat, idx) => (
+                    <option key={`main-cat-${cat}-${idx}`} value={cat}>
                       {cat}
                     </option>
                   ))}
@@ -560,8 +715,8 @@ export default function AllProductsPage() {
                   className="bg-transparent text-xs font-medium text-[#172126] outline-hidden cursor-pointer"
                 >
                   <option value="All">All Subcategories</option>
-                  {filterSubcategoryOptions.map((sub) => (
-                    <option key={sub} value={sub}>
+                  {filterSubcategoryOptions.map((sub, idx) => (
+                    <option key={`sub-cat-${sub}-${idx}`} value={sub}>
                       {sub}
                     </option>
                   ))}
@@ -914,17 +1069,19 @@ export default function AllProductsPage() {
                       Subcategory *
                     </label>
                     <select
-                      value={formData.subcategory}
+                      value={formData.subcategoryId}
                       onChange={(e) => handleFormSubcategoryChange(e.target.value)}
                       className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] cursor-pointer"
                     >
-                      {Object.values(CATEGORY_MAP)
-                        .flatMap((c) => c.subs)
-                        .map((sub) => (
-                          <option key={sub} value={sub}>
-                            {sub}
+                      {subcategoriesList.length === 0 ? (
+                        <option value="">No subcategories available</option>
+                      ) : (
+                        subcategoriesList.map((sub) => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.name} ({sub.mainCategoryName})
                           </option>
-                        ))}
+                        ))
+                      )}
                     </select>
                     <p className="text-[11px] text-[#718096]">
                       Selecting subcategory auto-assigns main category.
@@ -937,9 +1094,30 @@ export default function AllProductsPage() {
                     </label>
                     <div className="h-10 px-3.5 bg-white text-sm font-semibold text-[#980e27] rounded-lg border border-[#E5E7EB] flex items-center gap-2">
                       <Layers className="w-4 h-4 text-[#980e27]" />
-                      <span>{formData.mainCategory || "Rubber Accelerators"}</span>
+                      <span>{formData.mainCategory || "Main Category"}</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Product Image File Input */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
+                    Product Image
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) setProductImageFile(f);
+                    }}
+                    className="w-full text-xs text-[#718096] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#FFF5F7] file:text-[#980e27] hover:file:bg-[#980e27] hover:file:text-white file:cursor-pointer transition-colors"
+                  />
+                  {productImageFile && (
+                    <p className="text-xs text-[#087F5B] font-medium">
+                      Selected image: {productImageFile.name}
+                    </p>
+                  )}
                 </div>
 
                 {/* Short Description */}
@@ -990,47 +1168,60 @@ export default function AllProductsPage() {
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4 text-[#980e27]" />
                       <span className="text-xs font-bold text-[#172126] uppercase tracking-wider">
-                        Technical Documents (TDS & SDS)
+                        Technical Documents (TDS)
                       </span>
                     </div>
                     {/* TDS Availability Indicator */}
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        formData.tdsFile
+                        tdsPdfFile || formData.tdsFile
                           ? "bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/20"
                           : "bg-[#F1F5F9] text-[#64748B] border border-[#CBD5E1]"
                       }`}
                     >
                       <span
                         className={`w-1.5 h-1.5 rounded-full ${
-                          formData.tdsFile ? "bg-[#087F5B]" : "bg-[#64748B]"
+                          tdsPdfFile || formData.tdsFile ? "bg-[#087F5B]" : "bg-[#64748B]"
                         }`}
                       />
-                      {formData.tdsFile ? "TDS Available" : "No TDS Uploaded"}
+                      {tdsPdfFile || formData.tdsFile ? "TDS Available" : "No TDS Uploaded"}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     {/* TDS PDF Card */}
                     <div className="p-4 rounded-xl bg-white border border-[#E5E7EB] space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-[#172126] uppercase tracking-wider">
-                          Technical Data Sheet (TDS)
+                          Technical Data Sheet (TDS PDF)
                         </span>
                         <span className="text-[10px] text-[#718096]">Max 10MB (PDF)</span>
                       </div>
 
-                      {formData.tdsFile ? (
+                      <div className="space-y-2">
+                        <label className="block text-[11px] font-semibold text-[#718096] uppercase">
+                          TDS Version
+                        </label>
+                        <input
+                          type="text"
+                          value={tdsVersionInput}
+                          onChange={(e) => setTdsVersionInput(e.target.value)}
+                          placeholder="1.0"
+                          className="w-full h-9 px-3 bg-white text-xs text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
+                        />
+                      </div>
+
+                      {tdsPdfFile || formData.tdsFile ? (
                         <div className="space-y-2">
                           <div className="p-2.5 bg-[#FFF5F7] border border-[#980e27]/20 rounded-lg flex items-center justify-between">
                             <div className="flex items-center gap-2 truncate">
                               <FileText className="w-4 h-4 text-[#980e27] shrink-0" />
                               <div className="truncate">
                                 <span className="text-xs font-semibold text-[#172126] block truncate">
-                                  {formData.tdsFile}
+                                  {tdsPdfFile ? tdsPdfFile.name : formData.tdsFile}
                                 </span>
                                 <span className="text-[10px] text-[#718096]">
-                                  v1.2 • Uploaded 28 Sep 2026
+                                  v{tdsVersionInput} • Ready for save
                                 </span>
                               </div>
                             </div>
@@ -1044,14 +1235,20 @@ export default function AllProductsPage() {
                                 accept="application/pdf"
                                 onChange={(e) => {
                                   const f = e.target.files?.[0];
-                                  if (f) setFormData((prev) => ({ ...prev, tdsFile: f.name }));
+                                  if (f) {
+                                    setTdsPdfFile(f);
+                                    setFormData((prev) => ({ ...prev, tdsFile: f.name }));
+                                  }
                                 }}
                                 className="hidden"
                               />
                             </label>
                             <button
                               type="button"
-                              onClick={() => setFormData((prev) => ({ ...prev, tdsFile: "" }))}
+                              onClick={() => {
+                                setTdsPdfFile(null);
+                                setFormData((prev) => ({ ...prev, tdsFile: "" }));
+                              }}
                               className="py-1.5 px-2 bg-white hover:bg-[#FFF5F5] border border-[#FEB2B2] text-[#E53E3E] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                             >
                               Remove
@@ -1065,83 +1262,17 @@ export default function AllProductsPage() {
                             Upload TDS (PDF)
                           </span>
                           <span className="text-[10px] text-[#718096] block">
-                            Required to enable public TDS requests
+                            Required for public TDS download & request emails
                           </span>
                           <input
                             type="file"
                             accept="application/pdf"
                             onChange={(e) => {
                               const f = e.target.files?.[0];
-                              if (f) setFormData((prev) => ({ ...prev, tdsFile: f.name }));
-                            }}
-                            className="hidden"
-                          />
-                        </label>
-                      )}
-                    </div>
-
-                    {/* SDS PDF Card */}
-                    <div className="p-4 rounded-xl bg-white border border-[#E5E7EB] space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#172126] uppercase tracking-wider">
-                          Safety Data Sheet (SDS)
-                        </span>
-                        <span className="text-[10px] text-[#718096]">Max 10MB (PDF)</span>
-                      </div>
-
-                      {formData.sdsFile ? (
-                        <div className="space-y-2">
-                          <div className="p-2.5 bg-[#E0F2FE] border border-[#0369A1]/20 rounded-lg flex items-center justify-between">
-                            <div className="flex items-center gap-2 truncate">
-                              <FileText className="w-4 h-4 text-[#0369A1] shrink-0" />
-                              <div className="truncate">
-                                <span className="text-xs font-semibold text-[#172126] block truncate">
-                                  {formData.sdsFile}
-                                </span>
-                                <span className="text-[10px] text-[#718096]">
-                                  REACH SDS • Uploaded 20 Sep 2026
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <label className="flex-1 text-center py-1.5 px-2 bg-[#F3F5F6] hover:bg-[#E5E7EB] border border-[#DDE3E0] rounded-lg text-xs font-semibold text-[#475569] cursor-pointer transition-colors">
-                              Replace SDS
-                              <input
-                                type="file"
-                                accept="application/pdf"
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0];
-                                  if (f) setFormData((prev) => ({ ...prev, sdsFile: f.name }));
-                                }}
-                                className="hidden"
-                              />
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => setFormData((prev) => ({ ...prev, sdsFile: "" }))}
-                              className="py-1.5 px-2 bg-white hover:bg-[#FFF5F5] border border-[#FEB2B2] text-[#E53E3E] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <label className="block p-4 rounded-xl border-2 border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center cursor-pointer transition-colors">
-                          <Upload className="w-5 h-5 text-[#980e27] mx-auto mb-1" />
-                          <span className="text-xs font-semibold text-[#172126] block">
-                            Upload SDS (PDF)
-                          </span>
-                          <span className="text-[10px] text-[#718096] block">
-                            Safety Data Sheet
-                          </span>
-                          <input
-                            type="file"
-                            accept="application/pdf"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) setFormData((prev) => ({ ...prev, sdsFile: f.name }));
+                              if (f) {
+                                setTdsPdfFile(f);
+                                setFormData((prev) => ({ ...prev, tdsFile: f.name }));
+                              }
                             }}
                             className="hidden"
                           />
@@ -1231,8 +1362,10 @@ export default function AllProductsPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+                    disabled={isSaving}
+                    className="px-6 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-2 disabled:opacity-50"
                   >
+                    {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                     {editingProduct ? "Save Changes" : "Create Product"}
                   </button>
                 </div>
@@ -1260,16 +1393,19 @@ export default function AllProductsPage() {
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
+                disabled={isDeleting}
                 onClick={() => setDeleteModalId(null)}
-                className="px-4 py-2 border border-[#E5E7EB] text-xs font-semibold text-[#475569] rounded-lg hover:bg-[#F8FAFA]"
+                className="px-4 py-2 border border-[#E5E7EB] text-xs font-semibold text-[#475569] rounded-lg hover:bg-[#F8FAFA] disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
+                disabled={isDeleting}
                 onClick={handleDeleteConfirm}
-                className="px-4 py-2 bg-[#E53E3E] hover:bg-[#C53030] text-white text-xs font-semibold rounded-lg shadow-xs"
+                className="px-4 py-2 bg-[#E53E3E] hover:bg-[#C53030] text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-2 disabled:opacity-50 cursor-pointer"
               >
+                {isDeleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Confirm Delete
               </button>
             </div>
@@ -1295,16 +1431,19 @@ export default function AllProductsPage() {
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
+                disabled={isDeleting}
                 onClick={() => setIsBulkDeleteModalOpen(false)}
-                className="px-4 py-2 border border-[#E5E7EB] text-xs font-semibold text-[#475569] rounded-lg hover:bg-[#F8FAFA]"
+                className="px-4 py-2 border border-[#E5E7EB] text-xs font-semibold text-[#475569] rounded-lg hover:bg-[#F8FAFA] disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
+                disabled={isDeleting}
                 onClick={handleBulkDeleteConfirm}
-                className="px-4 py-2 bg-[#E53E3E] hover:bg-[#C53030] text-white text-xs font-semibold rounded-lg shadow-xs"
+                className="px-4 py-2 bg-[#E53E3E] hover:bg-[#C53030] text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-2 disabled:opacity-50 cursor-pointer"
               >
+                {isDeleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Confirm Bulk Delete
               </button>
             </div>
