@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout from "../../component/layout/Layout";
+import BreadCrumbs from "../../component/common/BreadCrumbs";
 import {
   getProductCategoriesApi,
   createProductCategoryApi,
@@ -61,6 +62,7 @@ export default function MainCategoriesPage() {
   // Drawer / Form State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<MainCategoryItem | null>(null);
+  const [drawerError, setDrawerError] = useState("");
 
   // Delete & Prevention Modal State
   const [deleteTarget, setDeleteTarget] = useState<MainCategoryItem | null>(null);
@@ -206,6 +208,7 @@ export default function MainCategoriesPage() {
       order: categories.length + 1,
     });
     setImageFile(null);
+    setDrawerError("");
     setIsDrawerOpen(true);
   };
 
@@ -221,6 +224,7 @@ export default function MainCategoriesPage() {
       order: category.order,
     });
     setImageFile(null);
+    setDrawerError("");
     setIsDrawerOpen(true);
   };
 
@@ -242,6 +246,13 @@ export default function MainCategoriesPage() {
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    setDrawerError("");
+
+    if (!editingCategory && !imageFile) {
+      setDrawerError("Please select a category thumbnail image file before saving.");
+      setIsSaving(false);
+      return;
+    }
 
     try {
       const payload = new FormData();
@@ -267,38 +278,11 @@ export default function MainCategoriesPage() {
       setIsDrawerOpen(false);
     } catch (err: any) {
       console.error("Save category error:", err);
-      // Fallback local update if API returns error
-      if (editingCategory) {
-        setCategories((prev) =>
-          prev.map((c) =>
-            c.id === editingCategory.id
-              ? {
-                  ...c,
-                  name: formData.name,
-                  slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-                  shortDescription: formData.shortDescription,
-                  description: formData.description,
-                  status: formData.status,
-                  order: Number(formData.order),
-                }
-              : c
-          )
-        );
-      } else {
-        const newCat: MainCategoryItem = {
-          id: `cat-${Date.now()}`,
-          order: Number(formData.order),
-          name: formData.name,
-          slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-          shortDescription: formData.shortDescription,
-          description: formData.description,
-          subcategoryCount: 0,
-          status: formData.status,
-          createdAt: "Just now",
-        };
-        setCategories((prev) => [...prev, newCat]);
-      }
-      setIsDrawerOpen(false);
+      const errMsg =
+        err?.message ||
+        (err?.errors ? Object.values(err.errors).flat().join(" ") : null) ||
+        "Failed to save category. Please verify your inputs.";
+      setDrawerError(errMsg);
     } finally {
       setIsSaving(false);
     }
@@ -338,15 +322,12 @@ export default function MainCategoriesPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs text-[#718096] mb-1 font-medium">
-              <Link href="/" className="hover:text-[#980e27] transition-colors">
-                Home
-              </Link>
-              <span>/</span>
-              <span>Product Management</span>
-              <span>/</span>
-              <span className="text-[#980e27] font-semibold">Main Categories</span>
-            </div>
+            <BreadCrumbs
+              items={[
+                { label: "Product Management" },
+                { label: "Main Categories" },
+              ]}
+            />
 
             {/* Title & Subtitle */}
             <h1 className="text-2xl font-bold text-[#172126] tracking-tight">
@@ -753,6 +734,11 @@ export default function MainCategoriesPage() {
 
               {/* Drawer Form Body */}
               <form onSubmit={handleSaveCategory} className="flex-1 overflow-y-auto p-6 space-y-6">
+                {drawerError && (
+                  <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+                    {drawerError}
+                  </div>
+                )}
                 {/* Category Name */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
@@ -792,10 +778,24 @@ export default function MainCategoriesPage() {
                     Short Description
                   </label>
                   <textarea
+                    rows={2}
+                    value={formData.shortDescription}
+                    onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+                    placeholder="Brief summary for category cards and preview listings..."
+                    className="w-full p-3 bg-white text-sm text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] focus:ring-2 focus:ring-[#980e27]/20"
+                  />
+                </div>
+
+                {/* Full Description */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
+                    Full Description
+                  </label>
+                  <textarea
                     rows={3}
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Brief description of product types in this main category..."
+                    placeholder="Detailed description of product types in this main category..."
                     className="w-full p-3 bg-white text-sm text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] focus:ring-2 focus:ring-[#980e27]/20"
                   />
                 </div>

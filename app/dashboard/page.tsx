@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import DashboardLayout from "../component/layout/Layout";
+import BreadCrumbs from "../component/common/BreadCrumbs";
 import {
   Layers,
   FolderTree,
@@ -41,13 +42,7 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs text-[#718096] mb-1.5 font-medium">
-              <Link href="/" className="hover:text-[#980e27] transition-colors">
-                Home
-              </Link>
-              <span>/</span>
-              <span className="text-[#980e27] font-semibold">Dashboard</span>
-            </div>
+            <BreadCrumbs items={[{ label: "Dashboard" }]} />
 
             {/* Page Heading & Subtitle */}
             <h1 className="text-2xl sm:text-3xl font-bold text-[#172126] tracking-tight">

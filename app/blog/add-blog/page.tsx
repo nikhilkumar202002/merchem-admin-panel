@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import DashboardLayout from "../../component/layout/Layout";
+import BreadCrumbs from "../../component/common/BreadCrumbs";
 import {
   FileText,
   Heading2,
@@ -95,17 +96,12 @@ export default function AddBlogPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E5E7EB]">
           <div>
             {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs text-[#718096] mb-1 font-medium">
-              <Link href="/" className="hover:text-[#980e27] transition-colors">
-                Home
-              </Link>
-              <span>/</span>
-              <Link href="/blog/view-all" className="hover:text-[#980e27] transition-colors">
-                Blog Management
-              </Link>
-              <span>/</span>
-              <span className="text-[#980e27] font-semibold">Add New Blog</span>
-            </div>
+            <BreadCrumbs
+              items={[
+                { label: "Blog Management", href: "/blog/view-all" },
+                { label: "Add New Blog" },
+              ]}
+            />
 
             {/* Title & Description */}
             <h1 className="text-2xl font-bold text-[#172126] tracking-tight">

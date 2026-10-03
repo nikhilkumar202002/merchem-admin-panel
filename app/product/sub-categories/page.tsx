@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import DashboardLayout from "../../component/layout/Layout";
+import BreadCrumbs from "../../component/common/BreadCrumbs";
 import {
   getProductCategoriesApi,
   getProductSubcategoriesApi,
@@ -373,15 +374,12 @@ function SubcategoriesContent() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs text-[#718096] mb-1 font-medium">
-              <Link href="/" className="hover:text-[#980e27] transition-colors">
-                Home
-              </Link>
-              <span>/</span>
-              <span>Product Management</span>
-              <span>/</span>
-              <span className="text-[#980e27] font-semibold">Subcategories</span>
-            </div>
+            <BreadCrumbs
+              items={[
+                { label: "Product Management" },
+                { label: "Subcategories" },
+              ]}
+            />
 
             {/* Title & Description */}
             <h1 className="text-2xl font-bold text-[#172126] tracking-tight">

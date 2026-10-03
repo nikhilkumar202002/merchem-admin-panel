@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout from "../../component/layout/Layout";
+import BreadCrumbs from "../../component/common/BreadCrumbs";
 import {
   getProductCategoriesApi,
   getProductSubcategoriesApi,
@@ -88,95 +89,10 @@ const CATEGORY_MAP: Record<string, { main: string; subs: string[] }> = {
 };
 
 // Initial Mock Product Data
-const initialProducts: ProductItem[] = [
-  {
-    id: "prod-1",
-    name: "VULCURE MBT",
-    slug: "vulcure-mbt",
-    mainCategory: "Rubber Accelerators",
-    subcategory: "Thiazoles",
-    shortDescription: "Primary fast-curing accelerator for NR, SBR and NBR rubbers.",
-    fullDescription: "VULCURE MBT (2-Mercaptobenzothiazole) is a versatile semi-ultra accelerator giving excellent physical properties and heat resistance in vulcanized rubber compounds.",
-    applications: ["Tyres", "Conveyor Belts", "Footwear", "Latex Dipping"],
-    status: "Published",
-    lastUpdated: "01 Oct 2026",
-    displayOrder: 1,
-    tdsFile: "Vulcure_MBT_TDS.pdf",
-    sdsFile: "Vulcure_MBT_SDS.pdf",
-    seoTitle: "VULCURE MBT - Rubber Accelerator | Merchem India",
-    seoDescription: "High-quality 2-Mercaptobenzothiazole rubber accelerator manufactured by Merchem India Pvt Ltd.",
-  },
-  {
-    id: "prod-2",
-    name: "VULCURE MBTS",
-    slug: "vulcure-mbts",
-    mainCategory: "Rubber Accelerators",
-    subcategory: "Thiazoles",
-    shortDescription: "Delayed action accelerator giving safe processing behavior.",
-    fullDescription: "VULCURE MBTS (Dibenzothiazole Disulfide) provides flat curing cure curves with good scorch resistance in natural and synthetic rubbers.",
-    applications: ["Automotive Hoses", "Industrial Mouldings", "Tyres"],
-    status: "Published",
-    lastUpdated: "30 Sep 2026",
-    displayOrder: 2,
-    tdsFile: "Vulcure_MBTS_TDS.pdf",
-    sdsFile: "Vulcure_MBTS_SDS.pdf",
-  },
-  {
-    id: "prod-3",
-    name: "VULCURE ZMBT",
-    slug: "vulcure-zmbt",
-    mainCategory: "Rubber Accelerators",
-    subcategory: "Thiazoles",
-    shortDescription: "Zinc salt of MBT designed for latex foam and dipped goods.",
-    fullDescription: "VULCURE ZMBT is recommended for latex processing as it imparts non-staining properties and fast cure rates in latex compounds.",
-    applications: ["Latex Gloves", "Foam Mattresses", "Medical Dipped Goods"],
-    status: "Draft",
-    lastUpdated: "28 Sep 2026",
-    displayOrder: 3,
-  },
-  {
-    id: "prod-4",
-    name: "VULCURE ZDC",
-    slug: "vulcure-zdc",
-    mainCategory: "Rubber Accelerators",
-    subcategory: "Dithiocarbamates",
-    shortDescription: "Ultra-accelerator for fast curing at low temperatures.",
-    fullDescription: "VULCURE ZDC (Zinc Diethyldithiocarbamate) functions as a secondary ultra accelerator in combination with thiazoles or sulfenamides.",
-    applications: ["Adhesives", "Latex Thread", "Proofed Fabrics"],
-    status: "Published",
-    lastUpdated: "25 Sep 2026",
-    displayOrder: 4,
-  },
-  {
-    id: "prod-5",
-    name: "VULCURE ZDBC",
-    slug: "vulcure-zdbc",
-    mainCategory: "Rubber Accelerators",
-    subcategory: "Dithiocarbamates",
-    shortDescription: "Fast curing ultra-accelerator with superior solubility in EPDM.",
-    fullDescription: "VULCURE ZDBC (Zinc Dibutyldithiocarbamate) offers high solubility in non-polar elastomers and eliminates blooming in EPDM profiles.",
-    applications: ["Weatherstrips", "EPDM Seals", "Cable Insulation"],
-    status: "Published",
-    lastUpdated: "24 Sep 2026",
-    displayOrder: 5,
-  },
-  {
-    id: "prod-6",
-    name: "VULCURE TMT",
-    slug: "vulcure-tmt",
-    mainCategory: "Rubber Accelerators",
-    subcategory: "Thiurams",
-    shortDescription: "Powerful ultra-accelerator and vulcanizing donor.",
-    fullDescription: "VULCURE TMT (Tetramethylthiuram Disulfide) acts as a primary or secondary accelerator and sulfur donor for heat-resistant rubber goods.",
-    applications: ["Heat Resistant Tubes", "Cable Compounds", "Bladders"],
-    status: "Published",
-    lastUpdated: "22 Sep 2026",
-    displayOrder: 6,
-  },
-];
+const initialProducts: ProductItem[] = [];
 
 export default function AllProductsPage() {
-  const [products, setProducts] = useState<ProductItem[]>(initialProducts);
+  const [products, setProducts] = useState<ProductItem[]>([]);
   const [subcategoriesList, setSubcategoriesList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -572,15 +488,12 @@ export default function AllProductsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs text-[#718096] mb-1 font-medium">
-              <Link href="/" className="hover:text-[#980e27] transition-colors">
-                Home
-              </Link>
-              <span>/</span>
-              <span>Product Management</span>
-              <span>/</span>
-              <span className="text-[#980e27] font-semibold">All Products</span>
-            </div>
+            <BreadCrumbs
+              items={[
+                { label: "Product Management" },
+                { label: "All Products" },
+              ]}
+            />
 
             {/* Title & Description */}
             <h1 className="text-2xl font-bold text-[#172126] tracking-tight">
