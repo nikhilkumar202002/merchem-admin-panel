@@ -12,26 +12,22 @@ interface BreadCrumbsProps {
 }
 
 const BreadCrumbs: React.FC<BreadCrumbsProps> = ({ items, className = "" }) => {
-  // Prepend 'Home' link if not explicitly provided as the first item
-  const allItems: BreadcrumbItem[] =
-    items.length > 0 && items[0].label.toLowerCase() === "home"
-      ? items
-      : [{ label: "Home", href: "/" }, ...items];
+  const allItems: BreadcrumbItem[] = items;
 
   return (
     <nav
       aria-label="Breadcrumb"
-      className={`flex items-center gap-2 text-xs text-[#718096] mb-1 font-medium ${className}`}
+      className={`flex items-center gap-1.5 text-[12px] text-[#64748B] mb-1 font-medium ${className}`}
     >
       {allItems.map((item, index) => {
         const isLast = index === allItems.length - 1;
         return (
           <React.Fragment key={index}>
-            {index > 0 && <span>/</span>}
+            {index > 0 && <span className="text-[#94A3B8]">/</span>}
             {isLast ? (
-              <span className="text-[#980e27] font-semibold">{item.label}</span>
+              <span className="text-[#172126] font-semibold">{item.label}</span>
             ) : item.href ? (
-              <Link href={item.href} className="hover:text-[#980e27] transition-colors">
+              <Link href={item.href} className="hover:text-[#087F5B] transition-colors">
                 {item.label}
               </Link>
             ) : (

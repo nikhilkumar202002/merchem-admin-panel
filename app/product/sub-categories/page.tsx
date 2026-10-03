@@ -375,7 +375,7 @@ function SubcategoriesContent() {
           <button
             type="button"
             onClick={handleOpenCreateDrawer}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] active:bg-[#600818] text-white text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-xs shadow-[#980e27]/20 shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#087F5B] hover:bg-[#066C4D] active:bg-[#05573E] text-white text-xs font-semibold rounded-md transition-all cursor-pointer shadow-xs shrink-0"
           >
             <Plus className="w-4 h-4" />
             Add Subcategory
@@ -623,8 +623,29 @@ function SubcategoriesContent() {
                         {/* Subcategory Name */}
                         <td className="py-4 px-5 text-sm font-bold text-[#172126]">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/15 flex items-center justify-center shrink-0">
-                              <FolderTree className="w-4 h-4" />
+                            <div className="w-9 h-9 rounded-lg overflow-hidden border border-[#E5E7EB] bg-[#F8FAFA] flex items-center justify-center shrink-0 relative">
+                              {item.image ? (
+                                <img
+                                  src={item.image}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                    const parent = e.currentTarget.parentElement;
+                                    if (parent) {
+                                      const fallback = parent.querySelector(".fallback-icon");
+                                      if (fallback) (fallback as HTMLElement).style.display = "flex";
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                className={`fallback-icon w-full h-full bg-[#FFF5F7] text-[#980e27] flex items-center justify-center ${
+                                  item.image ? "hidden" : ""
+                                }`}
+                              >
+                                <FolderTree className="w-4 h-4" />
+                              </div>
                             </div>
                             <span>{item.name}</span>
                           </div>

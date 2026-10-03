@@ -156,7 +156,7 @@ const ToastItem: React.FC<{
       case "error":
         return {
           bg: "bg-white border-rose-200 shadow-xl shadow-rose-500/10",
-          iconBg: "bg-rose-50 text-[#980e27] border-rose-100",
+          iconBg: "bg-rose-50 text-[#DC2626] border-rose-100",
           icon: AlertCircle,
           titleColor: "text-rose-950",
         };

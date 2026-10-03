@@ -136,14 +136,14 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between w-full h-[64px] px-4 md:px-[28px] bg-white border-b border-[#E5E7EB] select-none">
+    <header className="sticky top-0 z-30 flex items-center justify-between w-full h-[64px] px-4 md:px-[24px] bg-white border-b border-[#E5E7EB] select-none">
       {/* Left Area: Mobile Menu Toggle & Search Bar */}
       <div className="flex items-center gap-3 md:gap-4 flex-1 max-w-[500px]">
         {/* Mobile Sidebar Hamburger Toggle */}
         <button
           type="button"
           onClick={onToggleMobileSidebar}
-          className="p-2 text-[#4A5568] hover:text-[#980e27] hover:bg-[#FFF5F7] rounded-lg md:hidden transition-colors cursor-pointer"
+          className="p-2 text-[#4A5568] hover:text-[#087F5B] hover:bg-[#E6F4EA] rounded-lg md:hidden transition-colors cursor-pointer"
           aria-label="Toggle Navigation Sidebar"
         >
           <Menu className="w-5 h-5" />
@@ -155,7 +155,7 @@ const Header: React.FC<HeaderProps> = ({
           <input
             type="text"
             placeholder="Search here..."
-            className="w-full h-[40px] pl-10 pr-4 bg-[#F3F5F6] text-[#172126] text-[14px] font-normal placeholder-[#718096] rounded-[8px] border border-transparent outline-hidden transition-all focus:border-[#980e27] focus:bg-white focus:ring-2 focus:ring-[#980e27]/20"
+            className="w-full h-[38px] pl-10 pr-4 bg-[#F5F7F6] text-[#172126] text-[13px] font-normal placeholder-[#718096] rounded-md border border-[#E5E7EB] outline-hidden transition-all focus:border-[#087F5B] focus:bg-white focus:ring-2 focus:ring-[#087F5B]/20"
           />
         </div>
 
@@ -163,7 +163,7 @@ const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-          className="p-2 text-[#4A5568] hover:text-[#980e27] hover:bg-[#FFF5F7] rounded-lg sm:hidden transition-colors cursor-pointer"
+          className="p-2 text-[#4A5568] hover:text-[#087F5B] hover:bg-[#E6F4EA] rounded-lg sm:hidden transition-colors cursor-pointer"
           aria-label="Toggle Search"
         >
           <Search className="w-5 h-5" />
@@ -178,7 +178,7 @@ const Header: React.FC<HeaderProps> = ({
             type="text"
             placeholder="Search here..."
             autoFocus
-            className="flex-1 h-[40px] px-3 bg-[#F3F5F6] text-[#172126] text-[14px] rounded-[8px] border border-[#980e27] outline-hidden"
+            className="flex-1 h-[40px] px-3 bg-[#F5F7F6] text-[#172126] text-[13px] rounded-md border border-[#087F5B] outline-hidden"
           />
           <button
             type="button"
@@ -191,29 +191,29 @@ const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Right Area: Notifications & Profile */}
-      <div className="flex items-center gap-5 md:gap-7">
+      <div className="flex items-center gap-4 md:gap-6">
         {/* Notification Button & Dropdown */}
         <div className="relative" ref={notificationsRef}>
           <button
             type="button"
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-            className="relative p-2.5 text-[#4A5568] hover:text-[#980e27] hover:bg-[#FFF5F7] rounded-full transition-colors cursor-pointer outline-hidden focus:ring-2 focus:ring-[#980e27]/20"
+            className="relative p-2 text-[#4A5568] hover:text-[#087F5B] hover:bg-[#E6F4EA] rounded-full transition-colors cursor-pointer outline-hidden focus:ring-2 focus:ring-[#087F5B]/20"
             aria-label="View Notifications"
             aria-expanded={isNotificationsOpen}
           >
-            <Bell className="w-[20px] h-[20px]" />
-            {/* Red Notification Badge */}
-            <span className="absolute top-2 right-2 w-2 h-2 bg-[#980e27] rounded-full ring-2 ring-white" />
+            <Bell className="w-[19px] h-[19px]" />
+            {/* Notification Badge */}
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#087F5B] rounded-full ring-2 ring-white" />
           </button>
 
           {/* Notifications Dropdown */}
           {isNotificationsOpen && (
-            <div className="absolute right-0 mt-2 w-[320px] sm:w-[360px] bg-white rounded-xl shadow-lg border border-[#E5E7EB] py-3 z-50 animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute right-0 mt-2 w-[320px] sm:w-[350px] bg-white rounded-lg shadow-lg border border-[#E5E7EB] py-3 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="px-4 pb-2.5 mb-2 border-b border-[#E5E7EB] flex items-center justify-between">
-                <h3 className="text-[14px] font-semibold text-[#172126]">
+                <h3 className="text-[13px] font-semibold text-[#172126]">
                   Notifications
                 </h3>
-                <span className="text-[12px] font-semibold text-[#980e27] bg-[#FFF5F7] px-2 py-0.5 rounded-full border border-[#980e27]/10">
+                <span className="text-[11px] font-semibold text-[#087F5B] bg-[#E6F4EA] px-2 py-0.5 rounded-full border border-[#087F5B]/20">
                   2 New
                 </span>
               </div>
@@ -223,10 +223,10 @@ const Header: React.FC<HeaderProps> = ({
                   <div
                     key={notif.id}
                     className={`px-4 py-3 hover:bg-[#F8FAFA] transition-colors cursor-pointer flex items-start gap-3 ${
-                      notif.unread ? "bg-[#FFF5F7]/40" : ""
+                      notif.unread ? "bg-[#E6F4EA]/30" : ""
                     }`}
                   >
-                    <div className="p-1.5 rounded-full bg-[#FFF5F7] text-[#980e27] shrink-0 mt-0.5 border border-[#980e27]/10">
+                    <div className="p-1.5 rounded-full bg-[#E6F4EA] text-[#087F5B] shrink-0 mt-0.5 border border-[#087F5B]/20">
                       <Inbox className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1">
@@ -244,7 +244,7 @@ const Header: React.FC<HeaderProps> = ({
               <div className="pt-2 px-4 border-t border-[#E5E7EB] text-center">
                 <button
                   type="button"
-                  className="text-[12px] font-medium text-[#980e27] hover:text-[#7A0B1F] transition-colors cursor-pointer"
+                  className="text-[12px] font-medium text-[#087F5B] hover:text-[#062F2B] transition-colors cursor-pointer"
                 >
                   Mark all as read
                 </button>
@@ -254,35 +254,35 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Vertical Divider */}
-        <div className="h-6 w-[1px] bg-[#E5E7EB] hidden sm:block" />
+        <div className="h-5 w-[1px] bg-[#E5E7EB] hidden sm:block" />
 
         {/* Administrator Profile Menu */}
         <div className="relative" ref={profileRef}>
           <button
             type="button"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="flex items-center gap-3 p-1.5 rounded-lg hover:bg-[#F3F5F6] transition-colors cursor-pointer outline-hidden focus:ring-2 focus:ring-[#980e27]/20"
+            className="flex items-center gap-2.5 p-1 rounded-md hover:bg-[#F3F5F6] transition-colors cursor-pointer outline-hidden focus:ring-2 focus:ring-[#087F5B]/20"
             aria-expanded={isProfileOpen}
             aria-label="User Profile Menu"
           >
             {/* Avatar Circle */}
-            <div className="w-9 h-9 rounded-full bg-[#FFF5F7] text-[#980e27] font-semibold text-[14px] flex items-center justify-center border border-[#980e27]/20 shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#062F2B] text-white font-semibold text-[13px] flex items-center justify-center shrink-0">
               {displayInitials}
             </div>
 
             {/* Name and Role (Desktop/Tablet) */}
             <div className="hidden sm:flex flex-col text-left">
-              <span className="text-[14px] font-medium text-[#172126] leading-tight">
+              <span className="text-[13px] font-semibold text-[#172126] leading-tight">
                 {displayName}
               </span>
-              <span className="text-[12px] font-normal text-[#718096] leading-tight">
+              <span className="text-[11px] font-normal text-[#64748B] leading-tight">
                 {displayRole}
               </span>
             </div>
 
             {/* Dropdown Chevron */}
             <ChevronDown
-              className={`w-4 h-4 text-[#718096] transition-transform duration-200 ${
+              className={`w-3.5 h-3.5 text-[#718096] transition-transform duration-200 ${
                 isProfileOpen ? "rotate-180" : ""
               }`}
             />
@@ -290,37 +290,37 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Profile Dropdown Menu */}
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-[220px] bg-white rounded-xl shadow-lg border border-[#E5E7EB] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-              <div className="px-4 py-2.5 border-b border-[#E5E7EB] sm:hidden">
-                <p className="text-[14px] font-medium text-[#172126]">
+            <div className="absolute right-0 mt-2 w-[200px] bg-white rounded-lg shadow-lg border border-[#E5E7EB] py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+              <div className="px-3.5 py-2 border-b border-[#E5E7EB] sm:hidden">
+                <p className="text-[13px] font-semibold text-[#172126]">
                   {displayName}
                 </p>
-                <p className="text-[12px] text-[#718096]">{displayRole}</p>
+                <p className="text-[11px] text-[#64748B]">{displayRole}</p>
               </div>
 
               <div className="py-1">
                 <button
                   type="button"
-                  className="w-full px-4 py-2 text-left text-[14px] text-[#172126] hover:bg-[#FFF5F7] hover:text-[#980e27] flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full px-3.5 py-1.5 text-left text-[13px] text-[#172126] hover:bg-[#E6F4EA] hover:text-[#087F5B] flex items-center gap-2.5 transition-colors cursor-pointer"
                   onClick={() => setIsProfileOpen(false)}
                 >
-                  <User className="w-4 h-4 text-[#718096]" />
+                  <User className="w-3.5 h-3.5 text-[#718096]" />
                   My Profile
                 </button>
                 <button
                   type="button"
-                  className="w-full px-4 py-2 text-left text-[14px] text-[#172126] hover:bg-[#FFF5F7] hover:text-[#980e27] flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full px-3.5 py-1.5 text-left text-[13px] text-[#172126] hover:bg-[#E6F4EA] hover:text-[#087F5B] flex items-center gap-2.5 transition-colors cursor-pointer"
                   onClick={() => setIsProfileOpen(false)}
                 >
-                  <Settings className="w-4 h-4 text-[#718096]" />
+                  <Settings className="w-3.5 h-3.5 text-[#718096]" />
                   Account Settings
                 </button>
                 <button
                   type="button"
-                  className="w-full px-4 py-2 text-left text-[14px] text-[#172126] hover:bg-[#FFF5F7] hover:text-[#980e27] flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full px-3.5 py-1.5 text-left text-[13px] text-[#172126] hover:bg-[#E6F4EA] hover:text-[#087F5B] flex items-center gap-2.5 transition-colors cursor-pointer"
                   onClick={() => setIsProfileOpen(false)}
                 >
-                  <KeyRound className="w-4 h-4 text-[#718096]" />
+                  <KeyRound className="w-3.5 h-3.5 text-[#718096]" />
                   Change Password
                 </button>
               </div>
@@ -328,10 +328,10 @@ const Header: React.FC<HeaderProps> = ({
               <div className="border-t border-[#E5E7EB] pt-1">
                 <button
                   type="button"
-                  className="w-full px-4 py-2 text-left text-[14px] text-[#980e27] hover:bg-[#FFF5F7] flex items-center gap-2.5 transition-colors cursor-pointer font-medium"
+                  className="w-full px-3.5 py-1.5 text-left text-[13px] text-[#DC2626] hover:bg-[#FEF2F2] flex items-center gap-2.5 transition-colors cursor-pointer font-medium"
                   onClick={handleLogout}
                 >
-                  <LogOut className="w-4 h-4 text-[#980e27]" />
+                  <LogOut className="w-3.5 h-3.5 text-[#DC2626]" />
                   Logout
                 </button>
               </div>

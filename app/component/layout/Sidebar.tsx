@@ -40,6 +40,7 @@ interface SidebarProps {
 
 const navSections: NavSection[] = [
   {
+    title: "MAIN",
     items: [
       {
         id: "dashboard",
@@ -53,6 +54,12 @@ const navSections: NavSection[] = [
     title: "PRODUCT MANAGEMENT",
     items: [
       {
+        id: "products",
+        label: "All Products",
+        icon: Package,
+        href: "/product/all-products",
+      },
+      {
         id: "main-categories",
         label: "Main Categories",
         icon: Layers,
@@ -60,30 +67,24 @@ const navSections: NavSection[] = [
       },
       {
         id: "subcategories",
-        label: "Subcategories",
+        label: "Sub Categories",
         icon: FolderTree,
         href: "/product/sub-categories",
-      },
-      {
-        id: "products",
-        label: "Products",
-        icon: Package,
-        href: "/product/all-products",
       },
     ],
   },
   {
-    title: "BLOG MANAGEMENT",
+    title: "CONTENT MANAGEMENT",
     items: [
       {
         id: "all-blogs",
-        label: "All Blogs",
+        label: "Blog",
         icon: Newspaper,
         href: "/blog/view-all",
       },
       {
         id: "add-blog",
-        label: "Add New Blog",
+        label: "Add Blog",
         icon: FilePlus,
         href: "/blog/add-blog",
       },
@@ -146,7 +147,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     if (item.href === "/") {
       return pathname === "/";
     }
-    return pathname.startsWith(item.href);
+    return pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
   };
 
   const handleLinkClick = (id: string) => {
@@ -163,40 +164,40 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Backdrop Overlay */}
       {isOpenMobile && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs md:hidden"
           onClick={onCloseMobile}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Sidebar Container (#062F2B Corporate Dark Green) */}
       <aside
-        className={`fixed top-0 left-0 z-50 flex flex-col w-[240px] h-screen bg-white text-[#172126] border-r border-[#E5E7EB] transition-transform duration-300 ease-in-out md:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 flex flex-col w-[240px] h-screen bg-[#062F2B] text-white transition-transform duration-300 ease-in-out md:translate-x-0 ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        {/* Brand Header Link to Home */}
-        <div className="h-[72px] min-h-[72px] px-5 flex items-center justify-between border-b border-[#E5E7EB]">
+        {/* Brand Header */}
+        <div className="h-[64px] min-h-[64px] px-5 flex items-center justify-between border-b border-[#0B403B]">
           <Link
-            href="/"
+            href="/dashboard"
             onClick={onCloseMobile}
             className="flex items-center gap-3 group cursor-pointer"
           >
-            <div className="relative w-9 h-9 shrink-0 flex items-center justify-center">
+            <div className="relative w-8 h-8 shrink-0 flex items-center justify-center bg-white rounded-md p-1">
               <Image
                 src="/Main_logo.png"
                 alt="Merchem India Logo"
-                width={36}
-                height={36}
+                width={32}
+                height={32}
                 className="w-full h-full object-contain"
                 priority
               />
             </div>
             <div className="flex flex-col justify-center">
-              <span className="text-[16px] font-extrabold tracking-wider text-[#172126] group-hover:text-[#980e27] uppercase leading-tight transition-colors">
+              <span className="text-[14px] font-bold tracking-wider text-white uppercase leading-tight">
                 MERCHEM
               </span>
-              <span className="text-[10px] font-semibold text-[#980e27] uppercase tracking-wider leading-none mt-0.5">
+              <span className="text-[9px] font-medium text-[#34D399] uppercase tracking-widest leading-none mt-0.5">
                 INDIA PVT. LTD.
               </span>
             </div>
@@ -206,7 +207,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {onCloseMobile && (
             <button
               onClick={onCloseMobile}
-              className="p-1 rounded-md text-[#718096] hover:text-[#172126] hover:bg-[#F3F5F6] md:hidden transition-colors cursor-pointer"
+              className="p-1 rounded-md text-[#9CA3AF] hover:text-white hover:bg-[#087F5B]/20 md:hidden transition-colors cursor-pointer"
               aria-label="Close Sidebar"
             >
               <X className="w-5 h-5" />
@@ -215,18 +216,18 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Navigation Section Area */}
-        <nav className="flex-1 overflow-y-auto px-4 py-5 space-y-6 scrollbar-thin scrollbar-thumb-[#E5E7EB]">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5 scrollbar-thin scrollbar-thumb-[#087F5B]/20">
           {navSections.map((section, idx) => (
-            <div key={section.title || `section-${idx}`} className="space-y-2">
+            <div key={section.title || `section-${idx}`} className="space-y-1">
               {/* Section Header */}
               {section.title && (
-                <h3 className="px-3 pt-1 pb-1 text-[12px] font-semibold text-[#718096] tracking-wider uppercase select-none">
+                <h3 className="px-3 pt-1 pb-1 text-[11px] font-semibold text-[#9CA3AF] tracking-wider uppercase select-none">
                   {section.title}
                 </h3>
               )}
 
               {/* Navigation Items */}
-              <div className="space-y-[8px]">
+              <div className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const active = isLinkActive(item);
@@ -236,15 +237,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                       key={item.id}
                       href={item.href}
                       onClick={() => handleLinkClick(item.id)}
-                      className={`w-full h-[44px] flex items-center gap-3 px-3.5 text-left text-[14px] font-medium transition-all duration-150 cursor-pointer ${
+                      className={`w-full h-[38px] flex items-center gap-3 px-3 text-left text-[13px] font-medium transition-all duration-150 cursor-pointer ${
                         active
-                          ? "bg-[#980e27] text-white rounded-[7px] shadow-xs font-semibold"
-                          : "text-[#4A5568] hover:bg-[#FFF5F7] hover:text-[#980e27] rounded-[7px]"
+                          ? "bg-[#087F5B] text-white rounded-md font-semibold shadow-xs"
+                          : "text-[#D1D5DB] hover:bg-[#087F5B]/25 hover:text-white rounded-md"
                       }`}
                     >
                       <Icon
-                        className={`w-[18px] h-[18px] shrink-0 transition-colors ${
-                          active ? "text-white" : "text-[#718096]"
+                        className={`w-[17px] h-[17px] shrink-0 transition-colors ${
+                          active ? "text-white" : "text-[#9CA3AF]"
                         }`}
                       />
                       <span className="truncate">{item.label}</span>

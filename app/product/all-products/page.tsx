@@ -52,15 +52,11 @@ export interface ProductItem {
   subcategoryId?: string | number;
   shortDescription: string;
   fullDescription: string;
-  applications: string[];
-  status: "Published" | "Draft" | "Inactive";
+  applications: string;
+  status: "active" | "inactive";
   lastUpdated: string;
   displayOrder: number;
   image?: string | null;
-  tdsFile?: string | null;
-  tdsVersion?: string | null;
-  tdsAvailable?: boolean;
-  sdsFile?: string;
   seoTitle?: string;
   seoDescription?: string;
 }
@@ -94,6 +90,7 @@ const initialProducts: ProductItem[] = [];
 
 export default function AllProductsPage() {
   const [products, setProducts] = useState<ProductItem[]>([]);
+  const [mainCategoriesList, setMainCategoriesList] = useState<any[]>([]);
   const [subcategoriesList, setSubcategoriesList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -116,7 +113,7 @@ export default function AllProductsPage() {
   const [deleteModalId, setDeleteModalId] = useState<string | number | null>(null);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
-  // Form Fields State
+  // Form Fields State (Matching exact 11 backend fields)
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -126,17 +123,27 @@ export default function AllProductsPage() {
     shortDescription: "",
     fullDescription: "",
     applications: "",
-    status: "Published" as "Published" | "Draft" | "Inactive",
+    status: "active" as "active" | "inactive",
     displayOrder: 1,
     seoTitle: "",
     seoDescription: "",
-    tdsFile: "",
   });
 
   // File states for drawer upload
   const [productImageFile, setProductImageFile] = useState<File | null>(null);
-  const [tdsPdfFile, setTdsPdfFile] = useState<File | null>(null);
-  const [tdsVersionInput, setTdsVersionInput] = useState("1.0");
+
+  // Fetch Main Categories for dropdown select
+  const fetchMainCategoriesList = async () => {
+    try {
+      const res = await getProductCategoriesApi();
+      const raw = res.data || res;
+      if (Array.isArray(raw)) {
+        setMainCategoriesList(raw.map((c: any) => ({ id: c.id, name: c.name })));
+      }
+    } catch (err) {
+      console.error("Fetch main categories list error:", err);
+    }
+  };
 
   // Fetch Subcategories for dropdown select
   const fetchSubcategoriesList = async () => {
@@ -175,13 +182,10 @@ export default function AllProductsPage() {
           fullDescription: item.description || item.short_description || "",
           applications: item.applications
             ? Array.isArray(item.applications)
-              ? item.applications
-              : String(item.applications).split(",").map((a) => a.trim())
-            : [],
-          status:
-            item.status === "active" || item.status === "Active"
-              ? "Published"
-              : "Draft",
+              ? item.applications.join(", ")
+              : String(item.applications)
+            : "",
+          status: item.status === "inactive" || item.status === "Inactive" ? "inactive" : "active",
           lastUpdated: item.updated_at
             ? new Date(item.updated_at).toLocaleDateString()
             : "—",
@@ -193,9 +197,6 @@ export default function AllProductsPage() {
               ? item.image
               : `http://127.0.0.1:8000/storage/${item.image}`
             : null,
-          tdsFile: item.tds_document || item.tds_document_name || null,
-          tdsVersion: item.tds_document_version || null,
-          tdsAvailable: item.tds?.available || false,
           seoTitle: item.seo_title || "",
           seoDescription: item.seo_description || "",
         }));
@@ -209,6 +210,7 @@ export default function AllProductsPage() {
   };
 
   useEffect(() => {
+    fetchMainCategoriesList();
     fetchSubcategoriesList();
     fetchProducts();
   }, []);
@@ -258,10 +260,9 @@ export default function AllProductsPage() {
   // Statistics Summary Counts
   const stats = useMemo(() => {
     const total = products.length;
-    const published = products.filter((p) => p.status === "Published").length;
-    const drafts = products.filter((p) => p.status === "Draft").length;
-    const inactive = products.filter((p) => p.status === "Inactive").length;
-    return { total, published, drafts, inactive };
+    const published = products.filter((p) => p.status === "active").length;
+    const inactive = products.filter((p) => p.status === "inactive").length;
+    return { total, published, drafts: 0, inactive };
   }, [products]);
 
   // Reset Filters
@@ -290,28 +291,23 @@ export default function AllProductsPage() {
   // Open Drawer for Create
   const handleOpenCreateDrawer = () => {
     setEditingProduct(null);
-    const defaultSubId = subcategoriesList.length > 0 ? subcategoriesList[0].id : 1;
-    const defaultSubName = subcategoriesList.length > 0 ? subcategoriesList[0].name : "Subcategory";
-    const defaultMainName = subcategoriesList.length > 0 ? subcategoriesList[0].mainCategoryName : "Main Category";
+    const defaultMainName = mainCategoriesList.length > 0 ? mainCategoriesList[0].name : "Accelerators";
 
     setFormData({
       name: "",
       slug: "",
-      subcategoryId: defaultSubId,
-      subcategory: defaultSubName,
+      subcategoryId: "",
+      subcategory: "—",
       mainCategory: defaultMainName,
       shortDescription: "",
       fullDescription: "",
-      applications: "Tyres, Conveyor Belts, Footwear",
-      status: "Published",
+      applications: "",
+      status: "active",
       displayOrder: products.length + 1,
       seoTitle: "",
       seoDescription: "",
-      tdsFile: "",
     });
     setProductImageFile(null);
-    setTdsPdfFile(null);
-    setTdsVersionInput("1.0");
     setIsDrawerOpen(true);
   };
 
@@ -321,23 +317,18 @@ export default function AllProductsPage() {
     setFormData({
       name: product.name,
       slug: product.slug,
-      subcategoryId: product.subcategoryId || (subcategoriesList.length > 0 ? subcategoriesList[0].id : 1),
-      subcategory: product.subcategory,
-      mainCategory: product.mainCategory,
+      subcategoryId: product.subcategoryId || "",
+      subcategory: product.subcategory || "—",
+      mainCategory: product.mainCategory || (mainCategoriesList.length > 0 ? mainCategoriesList[0].name : ""),
       shortDescription: product.shortDescription,
       fullDescription: product.fullDescription,
-      applications: Array.isArray(product.applications)
-        ? product.applications.join(", ")
-        : product.applications,
-      status: product.status,
+      applications: product.applications || "",
+      status: product.status === "inactive" ? "inactive" : "active",
       displayOrder: product.displayOrder,
       seoTitle: product.seoTitle || "",
       seoDescription: product.seoDescription || "",
-      tdsFile: product.tdsFile || "",
     });
     setProductImageFile(null);
-    setTdsPdfFile(null);
-    setTdsVersionInput(product.tdsVersion || "1.0");
     setIsDrawerOpen(true);
   };
 
@@ -347,8 +338,7 @@ export default function AllProductsPage() {
     setFormData((prev) => ({
       ...prev,
       subcategoryId: subIdVal,
-      subcategory: subObj ? subObj.name : prev.subcategory,
-      mainCategory: subObj ? subObj.mainCategoryName : prev.mainCategory,
+      subcategory: subObj ? subObj.name : "—",
     }));
   };
 
@@ -366,7 +356,7 @@ export default function AllProductsPage() {
     }));
   };
 
-  // Save Product Handler (Calls POST /v1/products or POST /v1/products/{id} + TDS upload)
+  // Save Product Handler (Sends exact 11 fields required by backend API)
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -379,7 +369,7 @@ export default function AllProductsPage() {
       payload.append("short_description", formData.shortDescription || "");
       payload.append("description", formData.fullDescription || "");
       payload.append("applications", formData.applications || "");
-      payload.append("status", formData.status === "Published" ? "active" : "inactive");
+      payload.append("status", formData.status);
       payload.append("sort_order", String(formData.displayOrder));
       payload.append("seo_title", formData.seoTitle || `${formData.name} | Merchem India`);
       payload.append("seo_description", formData.seoDescription || formData.shortDescription || "");
@@ -388,24 +378,12 @@ export default function AllProductsPage() {
         payload.append("image", productImageFile);
       }
 
-      let savedProductRes: any;
       if (editingProduct) {
-        savedProductRes = await updateProductApi(editingProduct.id, payload);
+        await updateProductApi(editingProduct.id, payload);
         toast.success(`Product "${formData.name}" updated successfully!`);
       } else {
-        savedProductRes = await createProductApi(payload);
+        await createProductApi(payload);
         toast.success(`Product "${formData.name}" created successfully!`);
-      }
-
-      const createdId = savedProductRes?.data?.id || (editingProduct ? editingProduct.id : null);
-
-      // Handle optional TDS PDF file upload if provided
-      if (createdId && tdsPdfFile) {
-        const tdsFormData = new FormData();
-        tdsFormData.append("version", tdsVersionInput || "1.0");
-        tdsFormData.append("tds_document", tdsPdfFile);
-        await uploadProductTdsApi(createdId, tdsFormData);
-        toast.success("TDS Document uploaded successfully!");
       }
 
       await fetchProducts();
@@ -526,7 +504,7 @@ export default function AllProductsPage() {
           <button
             type="button"
             onClick={handleOpenCreateDrawer}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] active:bg-[#600818] text-white text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-xs shadow-[#980e27]/20 shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#087F5B] hover:bg-[#066C4D] active:bg-[#05573E] text-white text-xs font-semibold rounded-md transition-all cursor-pointer shadow-xs shrink-0"
           >
             <Plus className="w-4 h-4" />
             Add Product
@@ -807,8 +785,29 @@ export default function AllProductsPage() {
                         {/* Product Thumbnail & Name */}
                         <td className="py-4 px-5 text-sm font-medium text-[#172126]">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/15 flex items-center justify-center shrink-0">
-                              <Package className="w-5 h-5" />
+                            <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#E5E7EB] bg-[#F8FAFA] flex items-center justify-center shrink-0 relative">
+                              {item.image ? (
+                                <img
+                                  src={item.image}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                    const parent = e.currentTarget.parentElement;
+                                    if (parent) {
+                                      const fallback = parent.querySelector(".fallback-icon");
+                                      if (fallback) (fallback as HTMLElement).style.display = "flex";
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                className={`fallback-icon w-full h-full bg-[#FFF5F7] text-[#980e27] flex items-center justify-center ${
+                                  item.image ? "hidden" : ""
+                                }`}
+                              >
+                                <Package className="w-5 h-5" />
+                              </div>
                             </div>
                             <div>
                               <span className="font-bold text-[#172126] block leading-snug">
@@ -846,14 +845,12 @@ export default function AllProductsPage() {
                         <td className="py-4 px-5 text-sm">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                              item.status === "Published"
-                                ? "bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/10"
-                                : item.status === "Draft"
-                                ? "bg-[#FEF3C7] text-[#D97706] border border-[#FDE68A]"
+                              item.status === "active"
+                                ? "bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/20"
                                 : "bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]"
                             }`}
                           >
-                            {item.status}
+                            {item.status === "active" ? "Active" : "Inactive"}
                           </span>
                         </td>
 
@@ -993,40 +990,68 @@ export default function AllProductsPage() {
                   </div>
                 </div>
 
-                {/* Subcategory (Primary Selector) & Derived Main Category */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-[#F8FAFA] border border-[#E5E7EB]">
+                {/* Category & Subcategory Selection Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-[#F5F7F6] border border-[#E5E7EB]">
+                  {/* Main Category Required Selector */}
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
-                      Subcategory *
+                      Main Category *
                     </label>
                     <select
-                      value={formData.subcategoryId}
-                      onChange={(e) => handleFormSubcategoryChange(e.target.value)}
-                      className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] cursor-pointer"
+                      value={formData.mainCategory}
+                      onChange={(e) => {
+                        const selectedCatName = e.target.value;
+                        const catObj = mainCategoriesList.find((c) => c.name === selectedCatName);
+                        setFormData((prev) => ({
+                          ...prev,
+                          mainCategory: selectedCatName,
+                          subcategoryId: "",
+                          subcategory: "—",
+                        }));
+                      }}
+                      className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#087F5B] focus:ring-2 focus:ring-[#087F5B]/20 cursor-pointer"
                     >
-                      {subcategoriesList.length === 0 ? (
-                        <option value="">No subcategories available</option>
+                      {mainCategoriesList.length === 0 ? (
+                        <option value="">No categories available</option>
                       ) : (
-                        subcategoriesList.map((sub) => (
-                          <option key={sub.id} value={sub.id}>
-                            {sub.name} ({sub.mainCategoryName})
+                        mainCategoriesList.map((cat) => (
+                          <option key={cat.id} value={cat.name}>
+                            {cat.name}
                           </option>
                         ))
                       )}
                     </select>
-                    <p className="text-[11px] text-[#718096]">
-                      Selecting subcategory auto-assigns main category.
-                    </p>
                   </div>
 
+                  {/* Subcategory Optional Selector */}
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-[#718096] uppercase tracking-wider">
-                      Main Category (Auto-derived)
+                    <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
+                      Subcategory <span className="text-[#64748B] font-normal font-sans lowercase">(optional)</span>
                     </label>
-                    <div className="h-10 px-3.5 bg-white text-sm font-semibold text-[#980e27] rounded-lg border border-[#E5E7EB] flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-[#980e27]" />
-                      <span>{formData.mainCategory || "Main Category"}</span>
-                    </div>
+                    <select
+                      value={formData.subcategoryId}
+                      onChange={(e) => handleFormSubcategoryChange(e.target.value)}
+                      className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#087F5B] focus:ring-2 focus:ring-[#087F5B]/20 cursor-pointer"
+                    >
+                      {(() => {
+                        const available = subcategoriesList.filter(
+                          (s) => s.mainCategoryName === formData.mainCategory
+                        );
+                        if (available.length === 0) {
+                          return <option value="">No subcategories available for this category</option>;
+                        }
+                        return (
+                          <>
+                            <option value="">No Subcategory (—)</option>
+                            {available.map((sub) => (
+                              <option key={sub.id} value={sub.id}>
+                                {sub.name}
+                              </option>
+                            ))}
+                          </>
+                        );
+                      })()}
+                    </select>
                   </div>
                 </div>
 
@@ -1035,20 +1060,44 @@ export default function AllProductsPage() {
                   <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
                     Product Image
                   </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) setProductImageFile(f);
-                    }}
-                    className="w-full text-xs text-[#718096] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#FFF5F7] file:text-[#980e27] hover:file:bg-[#980e27] hover:file:text-white file:cursor-pointer transition-colors"
-                  />
-                  {productImageFile && (
-                    <p className="text-xs text-[#087F5B] font-medium">
-                      Selected image: {productImageFile.name}
-                    </p>
-                  )}
+                  <label className="relative p-4 rounded-xl border border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center cursor-pointer transition-colors block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) setProductImageFile(f);
+                      }}
+                      className="hidden"
+                    />
+                    {productImageFile || editingProduct?.image ? (
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={productImageFile ? URL.createObjectURL(productImageFile) : editingProduct!.image!}
+                          alt="Product preview"
+                          className="w-12 h-12 rounded-lg object-cover border border-[#E5E7EB] shrink-0"
+                        />
+                        <div className="text-left flex-1 min-w-0">
+                          <p className="text-xs font-bold text-[#172126] truncate">
+                            {productImageFile ? productImageFile.name : "Current product image"}
+                          </p>
+                          <p className="text-[10px] text-[#980e27] font-semibold mt-0.5">
+                            Click to replace image file
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 py-1">
+                        <Upload className="w-6 h-6 text-[#980e27] mx-auto" />
+                        <span className="text-xs font-semibold text-[#172126] block">
+                          Upload Product Image
+                        </span>
+                        <span className="text-[10px] text-[#718096] block">
+                          PNG, JPG or WEBP up to 2MB
+                        </span>
+                      </div>
+                    )}
+                  </label>
                 </div>
 
                 {/* Short Description */}
@@ -1065,155 +1114,35 @@ export default function AllProductsPage() {
                   />
                 </div>
 
-                {/* Full Technical Description */}
+                {/* Description */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
-                    Full Description & Technical Specifications
+                    Full Description
                   </label>
                   <textarea
                     rows={4}
                     value={formData.fullDescription}
                     onChange={(e) => setFormData({ ...formData, fullDescription: e.target.value })}
-                    placeholder="Detailed chemical properties, reaction curves, heat resistance specs..."
+                    placeholder="Detailed chemical properties and product description..."
                     className="w-full p-3 bg-white text-sm text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] focus:ring-2 focus:ring-[#980e27]/20"
                   />
                 </div>
 
-                {/* Applications Tags */}
+                {/* Applications */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
-                    Applications (Comma separated)
+                    Applications
                   </label>
                   <input
                     type="text"
                     value={formData.applications}
                     onChange={(e) => setFormData({ ...formData, applications: e.target.value })}
-                    placeholder="Tyres, Conveyor Belts, Footwear, Latex Dipping"
+                    placeholder="Rubber processing and vulcanization applications."
                     className="w-full h-10 px-3.5 bg-white text-sm text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] focus:ring-2 focus:ring-[#980e27]/20"
                   />
                 </div>
 
-                {/* Technical Documents Section */}
-                <div className="p-4 rounded-xl bg-[#F8FAFA] border border-[#E5E7EB] space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#980e27]" />
-                      <span className="text-xs font-bold text-[#172126] uppercase tracking-wider">
-                        Technical Documents (TDS)
-                      </span>
-                    </div>
-                    {/* TDS Availability Indicator */}
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        tdsPdfFile || formData.tdsFile
-                          ? "bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/20"
-                          : "bg-[#F1F5F9] text-[#64748B] border border-[#CBD5E1]"
-                      }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          tdsPdfFile || formData.tdsFile ? "bg-[#087F5B]" : "bg-[#64748B]"
-                        }`}
-                      />
-                      {tdsPdfFile || formData.tdsFile ? "TDS Available" : "No TDS Uploaded"}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    {/* TDS PDF Card */}
-                    <div className="p-4 rounded-xl bg-white border border-[#E5E7EB] space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#172126] uppercase tracking-wider">
-                          Technical Data Sheet (TDS PDF)
-                        </span>
-                        <span className="text-[10px] text-[#718096]">Max 10MB (PDF)</span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="block text-[11px] font-semibold text-[#718096] uppercase">
-                          TDS Version
-                        </label>
-                        <input
-                          type="text"
-                          value={tdsVersionInput}
-                          onChange={(e) => setTdsVersionInput(e.target.value)}
-                          placeholder="1.0"
-                          className="w-full h-9 px-3 bg-white text-xs text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
-                        />
-                      </div>
-
-                      {tdsPdfFile || formData.tdsFile ? (
-                        <div className="space-y-2">
-                          <div className="p-2.5 bg-[#FFF5F7] border border-[#980e27]/20 rounded-lg flex items-center justify-between">
-                            <div className="flex items-center gap-2 truncate">
-                              <FileText className="w-4 h-4 text-[#980e27] shrink-0" />
-                              <div className="truncate">
-                                <span className="text-xs font-semibold text-[#172126] block truncate">
-                                  {tdsPdfFile ? tdsPdfFile.name : formData.tdsFile}
-                                </span>
-                                <span className="text-[10px] text-[#718096]">
-                                  v{tdsVersionInput} • Ready for save
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <label className="flex-1 text-center py-1.5 px-2 bg-[#F3F5F6] hover:bg-[#E5E7EB] border border-[#DDE3E0] rounded-lg text-xs font-semibold text-[#475569] cursor-pointer transition-colors">
-                              Replace PDF
-                              <input
-                                type="file"
-                                accept="application/pdf"
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0];
-                                  if (f) {
-                                    setTdsPdfFile(f);
-                                    setFormData((prev) => ({ ...prev, tdsFile: f.name }));
-                                  }
-                                }}
-                                className="hidden"
-                              />
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTdsPdfFile(null);
-                                setFormData((prev) => ({ ...prev, tdsFile: "" }));
-                              }}
-                              className="py-1.5 px-2 bg-white hover:bg-[#FFF5F5] border border-[#FEB2B2] text-[#E53E3E] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <label className="block p-4 rounded-xl border-2 border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center cursor-pointer transition-colors">
-                          <Upload className="w-5 h-5 text-[#980e27] mx-auto mb-1" />
-                          <span className="text-xs font-semibold text-[#172126] block">
-                            Upload TDS (PDF)
-                          </span>
-                          <span className="text-[10px] text-[#718096] block">
-                            Required for public TDS download & request emails
-                          </span>
-                          <input
-                            type="file"
-                            accept="application/pdf"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) {
-                                setTdsPdfFile(f);
-                                setFormData((prev) => ({ ...prev, tdsFile: f.name }));
-                              }
-                            }}
-                            className="hidden"
-                          />
-                        </label>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* SEO Metadata Fields */}
+                {/* SEO Settings */}
                 <div className="p-4 rounded-xl bg-[#F8FAFA] border border-[#E5E7EB] space-y-3">
                   <div className="flex items-center gap-2 text-xs font-bold text-[#172126] uppercase tracking-wider">
                     <Globe className="w-4 h-4 text-[#980e27]" />
@@ -1228,7 +1157,7 @@ export default function AllProductsPage() {
                       type="text"
                       value={formData.seoTitle}
                       onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
-                      placeholder="VULCURE MBT - Rubber Accelerator | Merchem India"
+                      placeholder="VULCURE MBT | Merchem"
                       className="w-full h-9 px-3 bg-white text-xs text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
                     />
                   </div>
@@ -1241,7 +1170,7 @@ export default function AllProductsPage() {
                       rows={2}
                       value={formData.seoDescription}
                       onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
-                      placeholder="Meta description for search engine results..."
+                      placeholder="Product information for VULCURE MBT."
                       className="w-full p-2.5 bg-white text-xs text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
                     />
                   </div>
@@ -1258,20 +1187,19 @@ export default function AllProductsPage() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          status: e.target.value as "Published" | "Draft" | "Inactive",
+                          status: e.target.value as "active" | "inactive",
                         })
                       }
                       className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] cursor-pointer"
                     >
-                      <option value="Published">Published</option>
-                      <option value="Draft">Draft</option>
-                      <option value="Inactive">Inactive</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
                     </select>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
-                      Display Order
+                      Sort Order
                     </label>
                     <input
                       type="number"

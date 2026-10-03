@@ -267,7 +267,7 @@ export default function AllBlogsPage() {
           {/* Primary Action Button */}
           <Link
             href="/blog/add-blog"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] active:bg-[#600818] text-white text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-xs shadow-[#980e27]/20 shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#087F5B] hover:bg-[#066C4D] active:bg-[#05573E] text-white text-xs font-semibold rounded-md transition-all cursor-pointer shadow-xs shrink-0"
           >
             <Plus className="w-4 h-4" />
             Add New Blog

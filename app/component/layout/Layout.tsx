@@ -18,7 +18,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFA] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F5F7F6] flex flex-col font-sans">
       {/* Fixed Sidebar */}
       <Sidebar
         activeId={activeNavId}

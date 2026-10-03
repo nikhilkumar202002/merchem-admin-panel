@@ -127,7 +127,7 @@ export default function AddBlogPage() {
               type="button"
               onClick={() => handleSave(true)}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#087F5B] hover:bg-[#066C4D] active:bg-[#05573E] text-white text-xs font-semibold rounded-md shadow-xs transition-colors cursor-pointer"
             >
               <Send className="w-4 h-4" />
               <span>Publish Blog</span>

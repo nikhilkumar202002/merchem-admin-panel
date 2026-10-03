@@ -357,7 +357,7 @@ export default function MainCategoriesPage() {
           <button
             type="button"
             onClick={handleOpenCreateDrawer}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] active:bg-[#600818] text-white text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-xs shadow-[#980e27]/20 shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#087F5B] hover:bg-[#066C4D] active:bg-[#05573E] text-white text-xs font-semibold rounded-md transition-all cursor-pointer shadow-xs shrink-0"
           >
             <Plus className="w-4 h-4" />
             Add Category
@@ -604,8 +604,29 @@ export default function MainCategoriesPage() {
 
                         {/* Thumbnail Image */}
                         <td className="py-4 px-4 text-center">
-                          <div className="w-10 h-10 rounded-lg bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/15 flex items-center justify-center mx-auto shrink-0 shadow-2xs">
-                            <Layers className="w-5 h-5" />
+                          <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#E5E7EB] bg-[#F8FAFA] flex items-center justify-center mx-auto shrink-0 shadow-2xs relative">
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                  const parent = e.currentTarget.parentElement;
+                                  if (parent) {
+                                    const fallback = parent.querySelector(".fallback-icon");
+                                    if (fallback) (fallback as HTMLElement).style.display = "flex";
+                                  }
+                                }}
+                              />
+                            ) : null}
+                            <div
+                              className={`fallback-icon w-full h-full bg-[#FFF5F7] text-[#980e27] flex items-center justify-center ${
+                                item.image ? "hidden" : ""
+                              }`}
+                            >
+                              <Layers className="w-5 h-5" />
+                            </div>
                           </div>
                         </td>
 
@@ -820,7 +841,7 @@ export default function MainCategoriesPage() {
                   <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
                     Category Thumbnail Image
                   </label>
-                  <label className="relative p-5 rounded-xl border border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center space-y-2 cursor-pointer transition-colors block">
+                  <label className="relative p-4 rounded-xl border border-dashed border-[#DDE3E0] hover:border-[#980e27] bg-[#F8FAFA] text-center cursor-pointer transition-colors block">
                     <input
                       type="file"
                       accept="image/*"
@@ -831,13 +852,33 @@ export default function MainCategoriesPage() {
                       }}
                       className="hidden"
                     />
-                    <Upload className="w-6 h-6 text-[#980e27] mx-auto" />
-                    <span className="text-xs font-semibold text-[#172126] block">
-                      {imageFile ? imageFile.name : "Upload Category Banner / Icon"}
-                    </span>
-                    <span className="text-[10px] text-[#718096] block">
-                      PNG, JPG or SVG up to 2MB
-                    </span>
+                    {imageFile || editingCategory?.image ? (
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={imageFile ? URL.createObjectURL(imageFile) : editingCategory!.image!}
+                          alt="Category preview"
+                          className="w-12 h-12 rounded-lg object-cover border border-[#E5E7EB] shrink-0"
+                        />
+                        <div className="text-left flex-1 min-w-0">
+                          <p className="text-xs font-bold text-[#172126] truncate">
+                            {imageFile ? imageFile.name : "Current category image"}
+                          </p>
+                          <p className="text-[10px] text-[#980e27] font-semibold mt-0.5">
+                            Click to replace image file
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 py-1">
+                        <Upload className="w-6 h-6 text-[#980e27] mx-auto" />
+                        <span className="text-xs font-semibold text-[#172126] block">
+                          Upload Category Banner / Icon
+                        </span>
+                        <span className="text-[10px] text-[#718096] block">
+                          PNG, JPG or SVG up to 2MB
+                        </span>
+                      </div>
+                    )}
                   </label>
                 </div>
 
