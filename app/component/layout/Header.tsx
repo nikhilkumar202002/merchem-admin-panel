@@ -133,6 +133,10 @@ const Header: React.FC<HeaderProps> = ({
             };
           });
           setNotificationsList(mapped);
+
+          // Fallback unread count calculation if countRes is null
+          const calculatedUnread = mapped.filter((n) => n.unread).length;
+          setUnreadCount((prev) => (countRes ? prev : calculatedUnread));
         }
       }
 
@@ -144,6 +148,8 @@ const Header: React.FC<HeaderProps> = ({
             ? countRes.count
             : typeof countRes.data?.unread_count === "number"
             ? countRes.data.unread_count
+            : typeof countRes.data?.count === "number"
+            ? countRes.data.count
             : typeof countRes === "number"
             ? countRes
             : 0;
@@ -224,6 +230,11 @@ const Header: React.FC<HeaderProps> = ({
       .join("")
       .substring(0, 2)
       .toUpperCase() || defaultInitials;
+
+  const displayBadgeCount =
+    unreadCount > 0
+      ? unreadCount
+      : notificationsList.filter((n) => n.unread).length;
 
   // Close dropdowns on click outside
   useEffect(() => {
@@ -328,10 +339,10 @@ const Header: React.FC<HeaderProps> = ({
             aria-expanded={isNotificationsOpen}
           >
             <Bell className="w-[19px] h-[19px]" />
-            {/* Notification Badge */}
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-[#980e27] text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
-                {unreadCount > 99 ? "99+" : unreadCount}
+            {/* Notification Badge Counter */}
+            {displayBadgeCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-[#980e27] text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white shadow-2xs animate-in zoom-in-50 duration-150">
+                {displayBadgeCount > 99 ? "99+" : displayBadgeCount}
               </span>
             )}
           </button>
