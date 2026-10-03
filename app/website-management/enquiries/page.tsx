@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
+import { getEnquiriesApi, updateEnquiryStatusApi, deleteEnquiryApi } from "@/app/utils/Enquiry";
 import {
   Mail,
   Search,
@@ -31,6 +32,7 @@ import {
   Tag,
   History,
   NotebookPen,
+  Loader2,
 } from "lucide-react";
 
 export interface EnquiryItem {
@@ -53,107 +55,111 @@ export interface EnquiryItem {
   }>;
 }
 
-const initialEnquiries: EnquiryItem[] = [
-  {
-    id: "enq-101",
-    customerName: "Rajesh Sharma",
-    email: "rajesh.sharma@apollotyres.com",
-    phone: "+91 98450 12345",
-    company: "Apollo Tyres Ltd",
-    subject: "Bulk Quote Request for Merchem CBS Accelerator (50 MT)",
-    type: "Product Quote",
-    message: "Respected Merchem Sales Team, we are interested in procuring 50 Metric Tonnes of Merchem CBS (N-Cyclohexyl-2-benzothiazolesulfenamide) for our Chennai manufacturing unit for Q4 production planning. Kindly share your best commercial terms, CIF Chennai port pricing, and TDS.",
-    dateReceived: "01 Oct 2026, 14:30 PM",
-    timestamp: 1790677800000,
-    status: "New",
-    adminNotes: "Assigned to Commercial Sales Team. Priority account.",
-    historyLog: [
-      { action: "Enquiry Received via Website Form", actor: "System", timestamp: "01 Oct 2026, 14:30 PM" },
-    ],
-  },
-  {
-    id: "enq-102",
-    customerName: "Anand Viswanathan",
-    email: "anand.v@mrft yres.com",
-    phone: "+91 94440 88776",
-    company: "MRF Limited",
-    subject: "Technical Consultation for Low-Temperature Latex Dipping Line",
-    type: "Technical Support",
-    message: "We are optimizing our medical glove dipping line in Kottayam and require low-temperature ultra accelerators to minimize nitrosamine generation. Can your R&D team recommend suitable dithiocarbamates or xanthates?",
-    dateReceived: "29 Sep 2026, 11:15 AM",
-    timestamp: 1790508900000,
-    status: "In Progress",
-    adminNotes: "Sent technical dossier to Anand on 30 Sep. Awaiting feedback from R&D Lead.",
-    historyLog: [
-      { action: "Enquiry Received via Website Form", actor: "System", timestamp: "29 Sep 2026, 11:15 AM" },
-      { action: "Status changed to In Progress", actor: "Nikhil Kumar", timestamp: "30 Sep 2026, 09:30 AM" },
-    ],
-  },
-  {
-    id: "enq-103",
-    customerName: "Suresh Nair",
-    email: "snair@tvssrichakra.com",
-    phone: "+91 98940 33211",
-    company: "TVS Srichakra Ltd",
-    subject: "Sample Request: Antioxidant 6PPD & TMQ for Heavy Duty Tyres",
-    type: "Sample Request",
-    message: "Requesting 5 kg evaluation samples of Merchem 6PPD and Merchem TMQ for flex-fatigue and thermal ageing compound trials. Please send to our Madurai R&D center.",
-    dateReceived: "26 Sep 2026, 16:45 PM",
-    timestamp: 1790268300000,
-    status: "Resolved",
-    adminNotes: "Sample dispatch tracking #BLR-883492 delivered on 28 Sep.",
-    historyLog: [
-      { action: "Enquiry Received via Website Form", actor: "System", timestamp: "26 Sep 2026, 16:45 PM" },
-      { action: "Status changed to In Progress", actor: "Nikhil Kumar", timestamp: "27 Sep 2026, 10:00 AM" },
-      { action: "Status changed to Resolved", actor: "Nikhil Kumar", timestamp: "28 Sep 2026, 17:00 PM" },
-    ],
-  },
-  {
-    id: "enq-104",
-    customerName: "Pooja Verma",
-    email: "pooja.verma@kalyanipolymers.in",
-    phone: "+91 97110 55432",
-    company: "Kalyani Polymers",
-    subject: "REACH & SVHC Compliance Declaration for Rubber Chemicals Export",
-    type: "General Enquiry",
-    message: "Our European customers require SVHC non-containment certificates and REACH registration numbers for Merchem TMTD and MBTS. Kindly provide official compliance documents.",
-    dateReceived: "22 Sep 2026, 10:20 AM",
-    timestamp: 1789900800000,
-    status: "Resolved",
-    adminNotes: "Emailed signed compliance certificates.",
-    historyLog: [
-      { action: "Enquiry Received via Website Form", actor: "System", timestamp: "22 Sep 2026, 10:20 AM" },
-      { action: "Status changed to Resolved", actor: "Corporate Comms", timestamp: "23 Sep 2026, 14:00 PM" },
-    ],
-  },
-  {
-    id: "enq-105",
-    customerName: "Vikramaditya Roy",
-    email: "v.roy@ceat.com",
-    phone: "+91 98200 77123",
-    company: "CEAT Limited",
-    subject: "Custom Accelerator Pre-blend Formulations for Green Tyre Tread",
-    type: "Product Quote",
-    message: "We are exploring masterbatch pre-blends of sulfenamide accelerators with organosilane coupling agents for low rolling resistance tread compounds. Please advise if Merchem offers customized masterbatch compounding.",
-    dateReceived: "18 Sep 2026, 15:10 PM",
-    timestamp: 1789571400000,
-    status: "Archived",
-    adminNotes: "Archived after technical clarification.",
-    historyLog: [
-      { action: "Enquiry Received via Website Form", actor: "System", timestamp: "18 Sep 2026, 15:10 PM" },
-      { action: "Status changed to Archived", actor: "Nikhil Kumar", timestamp: "20 Sep 2026, 11:00 AM" },
-    ],
-  },
-];
+const initialEnquiries: EnquiryItem[] = [];
+
+const mapApiEnquiryToItem = (item: any): EnquiryItem => {
+  const statusMap: Record<string, "New" | "In Progress" | "Resolved" | "Archived"> = {
+    new: "New",
+    in_progress: "In Progress",
+    "in progress": "In Progress",
+    resolved: "Resolved",
+    archived: "Archived",
+    New: "New",
+    "In Progress": "In Progress",
+    Resolved: "Resolved",
+    Archived: "Archived",
+  };
+
+  const status = statusMap[item.status] || "New";
+
+  const typeMap: Record<string, EnquiryItem["type"]> = {
+    product_quote: "Product Quote",
+    "Product Quote": "Product Quote",
+    technical_support: "Technical Support",
+    "Technical Support": "Technical Support",
+    sample_request: "Sample Request",
+    "Sample Request": "Sample Request",
+    general_enquiry: "General Enquiry",
+    "General Enquiry": "General Enquiry",
+  };
+
+  const type = typeMap[item.enquiry_type || item.type] || "General Enquiry";
+
+  const dateReceived = item.created_at
+    ? new Date(item.created_at).toLocaleString("en-US", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "Just now";
+
+  return {
+    id: String(item.id),
+    customerName: item.full_name || item.name || item.customerName || "Anonymous Customer",
+    email: item.email || "N/A",
+    phone: item.phone || item.mobile || undefined,
+    company: item.company_name || item.company || "N/A",
+    subject: item.subject || item.title || "Public Form Enquiry",
+    type,
+    message: item.message || "",
+    dateReceived,
+    timestamp: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
+    status,
+    adminNotes: item.admin_notes || item.notes || item.adminNotes || "",
+    historyLog: Array.isArray(item.history_log)
+      ? item.history_log
+      : [
+          {
+            action: "Enquiry Received via Website Form",
+            actor: "System",
+            timestamp: dateReceived,
+          },
+        ],
+  };
+};
 
 export default function EnquiriesPage() {
-  const [enquiries, setEnquiries] = useState<EnquiryItem[]>(initialEnquiries);
+  const [enquiries, setEnquiries] = useState<EnquiryItem[]>([]);
+  const [loadingEnquiries, setLoadingEnquiries] = useState<boolean>(true);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<"All" | "New" | "In Progress" | "Resolved" | "Archived">("All");
   const [selectedType, setSelectedType] = useState<string>("All");
   const [dateRange, setDateRange] = useState<string>("All");
+
+  // Fetch Live Enquiries from API (/v1/enquiries?search=...&status=...)
+  const fetchEnquiries = async () => {
+    setLoadingEnquiries(true);
+    try {
+      const params: Record<string, any> = {};
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+      if (selectedStatus && selectedStatus !== "All") {
+        params.status = selectedStatus.toLowerCase().replace(" ", "_");
+      }
+
+      const res = await getEnquiriesApi(params);
+      const rawList = res.data?.data || res.data || res || [];
+      if (Array.isArray(rawList)) {
+        setEnquiries(rawList.map(mapApiEnquiryToItem));
+      }
+    } catch (err) {
+      console.error("Failed to fetch enquiries:", err);
+    } finally {
+      setLoadingEnquiries(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchEnquiries();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, selectedStatus]);
 
   // Selection Checkboxes
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -227,10 +233,17 @@ export default function EnquiriesPage() {
   };
 
   // Status Change Handler
-  const handleUpdateStatus = (
+  const handleUpdateStatus = async (
     id: string,
     newStatus: "New" | "In Progress" | "Resolved" | "Archived"
   ) => {
+    try {
+      const apiStatus = newStatus.toLowerCase().replace(" ", "_");
+      await updateEnquiryStatusApi(id, { status: apiStatus });
+    } catch (err) {
+      console.error("Failed to update status on API:", err);
+    }
+
     setEnquiries((prev) =>
       prev.map((item) => {
         if (item.id === id) {
@@ -308,8 +321,13 @@ export default function EnquiriesPage() {
   };
 
   // Single Delete Confirm
-  const handleConfirmSingleDelete = () => {
+  const handleConfirmSingleDelete = async () => {
     if (!deleteTarget) return;
+    try {
+      await deleteEnquiryApi(deleteTarget.id);
+    } catch (err) {
+      console.error("Failed to delete enquiry from API:", err);
+    }
     setEnquiries((prev) => prev.filter((e) => e.id !== deleteTarget.id));
     setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.id));
     if (activeEnquiry?.id === deleteTarget.id) {
@@ -581,7 +599,12 @@ export default function EnquiriesPage() {
         {/* 4. ENQUIRIES DATA TABLE                                                   */}
         {/* ========================================================================= */}
         <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-2xs overflow-hidden">
-          {filteredEnquiries.length === 0 ? (
+          {loadingEnquiries ? (
+            <div className="py-16 text-center flex flex-col items-center justify-center gap-2">
+              <Loader2 className="w-6 h-6 animate-spin text-[#980e27]" />
+              <span className="text-xs font-medium text-[#718096]">Loading enquiries...</span>
+            </div>
+          ) : filteredEnquiries.length === 0 ? (
             /* Empty State */
             <div className="p-12 text-center space-y-4">
               <div className="w-12 h-12 rounded-full bg-[#FFF5F7] text-[#980e27] flex items-center justify-center mx-auto border border-[#980e27]/20">

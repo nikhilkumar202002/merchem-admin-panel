@@ -42,7 +42,7 @@ export interface UserItem {
   id: string;
   fullName: string;
   email: string;
-  role: "Super Admin" | "Administrator" | "Editor";
+  role: "Administrator" | "Editor";
   status: "Active" | "Inactive";
   avatarInitials: string;
   avatarBgColor: string;
@@ -63,12 +63,12 @@ const mapApiItemToUserItem = (item: any): UserItem => {
       .toUpperCase()
       .slice(0, 2) || "U";
 
-  let role: "Super Admin" | "Administrator" | "Editor" = "Editor";
+  let role: "Administrator" | "Editor" = "Editor";
   const r = (item.role || "").toLowerCase();
-  if (r === "super_admin" || r === "super admin") {
-    role = "Super Admin";
-  } else if (r === "admin" || r === "administrator") {
+  if (r === "admin" || r === "administrator" || r === "super_admin" || r === "super admin") {
     role = "Administrator";
+  } else {
+    role = "Editor";
   }
 
   const status: "Active" | "Inactive" =
@@ -81,12 +81,7 @@ const mapApiItemToUserItem = (item: any): UserItem => {
     role,
     status,
     avatarInitials: initials,
-    avatarBgColor:
-      role === "Super Admin"
-        ? "bg-[#980e27] text-white"
-        : role === "Administrator"
-        ? "bg-[#0369A1] text-white"
-        : "bg-[#D97706] text-white",
+    avatarBgColor: role === "Administrator" ? "bg-[#0369A1] text-white" : "bg-[#D97706] text-white",
     lastLogin: item.updated_at
       ? new Date(item.updated_at).toLocaleString()
       : "N/A",
@@ -140,11 +135,14 @@ export default function UsersManagementPage() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    role: "Editor" as "Super Admin" | "Administrator" | "Editor",
+    role: "editor" as "admin" | "editor",
     status: "Active" as "Active" | "Inactive",
     password: "",
     confirmPassword: "",
   });
+
+  // Form Field Validation Errors from Backend
+  const [formErrors, setFormErrors] = useState<Record<string, string[]>>({});
 
   // Password Visibility Toggle
   const [showPassword, setShowPassword] = useState(false);
@@ -170,7 +168,7 @@ export default function UsersManagementPage() {
     const total = users.length;
     const active = users.filter((u) => u.status === "Active").length;
     const inactive = users.filter((u) => u.status === "Inactive").length;
-    const admins = users.filter((u) => u.role === "Super Admin" || u.role === "Administrator").length;
+    const admins = users.filter((u) => u.role === "Administrator").length;
     return { total, active, inactive, admins };
   }, [users]);
 
@@ -181,7 +179,12 @@ export default function UsersManagementPage() {
         u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         u.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesRole = selectedRole === "All" || u.role === selectedRole;
+      const matchesRole =
+        selectedRole === "All" ||
+        (selectedRole === "admin" && u.role === "Administrator") ||
+        (selectedRole === "editor" && u.role === "Editor") ||
+        u.role === selectedRole;
+
       const matchesStatus = selectedStatus === "All" || u.status === selectedStatus;
 
       return matchesSearch && matchesRole && matchesStatus;
@@ -214,10 +217,11 @@ export default function UsersManagementPage() {
   // Open Drawer for Creating User
   const handleOpenCreateDrawer = () => {
     setEditingUser(null);
+    setFormErrors({});
     setFormData({
       fullName: "",
       email: "",
-      role: "Editor",
+      role: "editor",
       status: "Active",
       password: "",
       confirmPassword: "",
@@ -229,10 +233,12 @@ export default function UsersManagementPage() {
   // Open Drawer for Editing User
   const handleOpenEditDrawer = (user: UserItem) => {
     setEditingUser(user);
+    setFormErrors({});
+    const apiRole = user.role === "Administrator" ? "admin" : "editor";
     setFormData({
       fullName: user.fullName,
       email: user.email,
-      role: user.role,
+      role: apiRole,
       status: user.status,
       password: "",
       confirmPassword: "",
@@ -243,6 +249,7 @@ export default function UsersManagementPage() {
   // Save User Handler (Create / Edit)
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormErrors({});
 
     if (!formData.fullName.trim() || !formData.email.trim()) {
       alert("Please fill in all required fields.");
@@ -268,8 +275,9 @@ export default function UsersManagementPage() {
       .toUpperCase()
       .slice(0, 2);
 
-    const apiRole = formData.role.toLowerCase().replace(" ", "_");
-    const apiStatus = formData.status.toLowerCase();
+    const apiRole = formData.role; // "admin" or "editor"
+    const apiStatus = formData.status.toLowerCase(); // "active" or "inactive"
+    const displayRole: "Administrator" | "Editor" = apiRole === "admin" ? "Administrator" : "Editor";
 
     if (editingUser) {
       // Prevent current logged in user from self-deactivating
@@ -279,34 +287,42 @@ export default function UsersManagementPage() {
       }
 
       try {
-        await updateUserApi(editingUser.id, {
+        const res = await updateUserApi(editingUser.id, {
           name: formData.fullName.trim(),
           email: formData.email.trim(),
           role: apiRole,
           status: apiStatus,
         });
-      } catch (err) {
-        console.warn("Update user API failed, updating state locally:", err);
-      }
 
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id
-            ? {
-                ...u,
-                fullName: formData.fullName.trim(),
-                email: formData.email.trim(),
-                role: formData.role,
-                status: formData.status,
-                avatarInitials: initials,
-              }
-            : u
-        )
-      );
-      showToast(`Updated user account "${formData.fullName.trim()}"`);
+        const updatedData = res.data || res.user || res;
+        const updatedUserItem = (updatedData && updatedData.id)
+          ? mapApiItemToUserItem(updatedData)
+          : {
+              ...editingUser,
+              fullName: formData.fullName.trim(),
+              email: formData.email.trim(),
+              role: displayRole,
+              status: formData.status,
+              avatarInitials: initials,
+            };
+
+        setUsers((prev) =>
+          prev.map((u) => (u.id === editingUser.id ? updatedUserItem : u))
+        );
+        showToast(`Updated user account "${formData.fullName.trim()}"`);
+        setIsDrawerOpen(false);
+      } catch (err: any) {
+        console.error("Update user API failed:", err);
+        if (err?.errors) {
+          setFormErrors(err.errors);
+        } else {
+          const errMsg = err?.message || "Failed to update user";
+          alert(`User Update Error: ${errMsg}`);
+        }
+      }
     } else {
       try {
-        await createUserApi({
+        const res = await createUserApi({
           name: formData.fullName.trim(),
           email: formData.email.trim(),
           password: formData.password,
@@ -314,42 +330,58 @@ export default function UsersManagementPage() {
           role: apiRole,
           status: apiStatus,
         });
-      } catch (err) {
-        console.warn("Create user API failed, adding user to local state:", err);
+
+        const createdData = res.data || res.user || res;
+        const newUser: UserItem = (createdData && createdData.id)
+          ? mapApiItemToUserItem(createdData)
+          : {
+              id: `usr-${Date.now()}`,
+              fullName: formData.fullName.trim(),
+              email: formData.email.trim(),
+              role: displayRole,
+              status: formData.status,
+              avatarInitials: initials,
+              avatarBgColor:
+                displayRole === "Administrator"
+                  ? "bg-[#0369A1] text-white"
+                  : "bg-[#D97706] text-white",
+              lastLogin: "Never logged in",
+              createdDate: "Just now",
+            };
+
+        setUsers((prev) => [newUser, ...prev]);
+        showToast(`New user account "${formData.fullName.trim()}" created!`);
+        setIsDrawerOpen(false);
+      } catch (err: any) {
+        console.error("Create user API failed:", err);
+        if (err?.errors) {
+          setFormErrors(err.errors);
+        } else {
+          const errMsg = err?.message || "Failed to create user";
+          alert(`User Creation Error: ${errMsg}`);
+        }
       }
-
-      const newUser: UserItem = {
-        id: `usr-${Date.now()}`,
-        fullName: formData.fullName.trim(),
-        email: formData.email.trim(),
-        role: formData.role,
-        status: formData.status,
-        avatarInitials: initials,
-        avatarBgColor:
-          formData.role === "Super Admin"
-            ? "bg-[#980e27] text-white"
-            : formData.role === "Administrator"
-            ? "bg-[#0369A1] text-white"
-            : "bg-[#D97706] text-white",
-        lastLogin: "Never logged in",
-        createdDate: "Just now",
-      };
-
-      setUsers((prev) => [newUser, ...prev]);
-      showToast(`New user account "${formData.fullName.trim()}" created!`);
     }
-
-    setIsDrawerOpen(false);
   };
 
   // Toggle Account Active / Inactive Status
-  const handleToggleUserStatus = (user: UserItem) => {
+  const handleToggleUserStatus = async (user: UserItem) => {
     if (user.isCurrentUser) {
       showToast("Security Guard: You cannot deactivate your own logged-in account!");
       return;
     }
 
     const newStatus = user.status === "Active" ? "Inactive" : "Active";
+    const apiRole = user.role === "Administrator" ? "admin" : "editor";
+
+    try {
+      await updateUserApi(user.id, {
+        status: newStatus.toLowerCase(),
+      });
+    } catch (err) {
+      console.warn("API status update failed, updating UI state:", err);
+    }
+
     setUsers((prev) =>
       prev.map((u) => (u.id === user.id ? { ...u, status: newStatus } : u))
     );
@@ -359,27 +391,23 @@ export default function UsersManagementPage() {
   // Execute Password Reset
   const handleGeneratePasswordReset = () => {
     if (!resetTargetUser) return;
-    const randomPass = `Merchem#${Math.floor(100000 + Math.random() * 900000)}`;
-    setTempPassword(randomPass);
-    showToast(`Password reset link & temporary key generated for ${resetTargetUser.fullName}`);
+
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+    let pass = "";
+    for (let i = 0; i < 12; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    setTempPassword(pass);
+    showToast(`Reset password key generated for ${resetTargetUser.fullName}`);
   };
 
-  // Single Delete Confirmation with Safeguards
+  // Confirm Single Delete
   const handleConfirmSingleDelete = async () => {
     if (!deleteTarget) return;
 
     if (deleteTarget.isCurrentUser) {
-      alert("Security Guard: You cannot delete your own logged-in account!");
-      setDeleteTarget(null);
-      return;
-    }
-
-    // Check if last Super Admin
-    const superAdminsCount = users.filter(
-      (u) => u.role === "Super Admin" && u.status === "Active"
-    ).length;
-    if (deleteTarget.role === "Super Admin" && superAdminsCount <= 1) {
-      alert("Security Guard: Cannot delete the last active Super Admin account.");
+      showToast("Security Guard: You cannot delete your own logged-in account!");
       setDeleteTarget(null);
       return;
     }
@@ -387,164 +415,156 @@ export default function UsersManagementPage() {
     try {
       await deleteUserApi(deleteTarget.id);
     } catch (err) {
-      console.warn("Delete user API failed, deleting state locally:", err);
+      console.warn("API user deletion failed, updating UI state:", err);
     }
 
     setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
-    setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.id));
-    showToast(`Deleted user account "${deleteTarget.fullName}"`);
+    showToast(`User account "${deleteTarget.fullName}" has been permanently removed.`);
     setDeleteTarget(null);
   };
 
-  // Bulk Delete Confirmation
-  const handleConfirmBulkDelete = () => {
-    // Exclude current user from bulk delete
-    const safeToDelete = selectedIds.filter((id) => {
-      const u = users.find((item) => item.id === id);
-      return u && !u.isCurrentUser;
+  // Confirm Bulk Delete
+  const handleConfirmBulkDelete = async () => {
+    const validDeletes = selectedIds.filter((id) => {
+      const target = users.find((u) => u.id === id);
+      return target && !target.isCurrentUser;
     });
 
-    setUsers((prev) => prev.filter((u) => !safeToDelete.includes(u.id)));
+    for (const id of validDeletes) {
+      try {
+        await deleteUserApi(id);
+      } catch (err) {
+        console.warn(`API bulk delete failed for user ${id}:`, err);
+      }
+    }
+
+    setUsers((prev) => prev.filter((u) => !validDeletes.includes(u.id)));
     setSelectedIds([]);
     setIsBulkDeleteModalOpen(false);
-    showToast(`Deleted ${safeToDelete.length} selected user account(s)!`);
-  };
-
-  // Copy Email Address
-  const handleCopyEmail = (email: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    navigator.clipboard.writeText(email);
-    showToast(`Copied ${email} to clipboard!`);
+    showToast(`${validDeletes.length} user accounts removed successfully.`);
   };
 
   return (
-    <DashboardLayout activeNavId="users">
-      <div className="space-y-6 w-full pb-16 select-none relative">
+    <DashboardLayout>
+      <div className="space-y-6 pb-12">
         {/* Toast Notification */}
         {toastMessage && (
-          <div className="fixed top-20 right-6 z-50 bg-[#172126] text-white px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-top-2">
-            <CheckCircle2 className="w-4 h-4 text-[#86EFAC]" />
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-[#172126] text-white text-xs font-semibold rounded-xl shadow-xl border border-white/10 animate-in slide-in-from-bottom-3 duration-200">
+            <CheckCircle2 className="w-4 h-4 text-[#38A169]" />
             <span>{toastMessage}</span>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* 1. PAGE HEADER                                                            */}
+        {/* 1. PAGE BREADCRUMBS & HEADER                                             */}
         {/* ========================================================================= */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            {/* Breadcrumb */}
             <BreadCrumbs
               items={[
-                { label: "Administration" },
-                { label: "Users" },
+                { label: "Dashboard", href: "/" },
+                { label: "Administration", href: "/administration/users" },
+                { label: "User Management" },
               ]}
             />
-
-            {/* Title & Subtitle */}
-            <h1 className="text-2xl font-bold text-[#172126] tracking-tight">
-              Users Management
+            <h1 className="text-xl font-bold text-[#172126] tracking-tight mt-1">
+              User & Access Control
             </h1>
-            <p className="text-sm text-[#718096] mt-0.5">
-              Manage administrator accounts and control access to the Merchem content management system.
+            <p className="text-xs text-[#718096] mt-0.5">
+              Manage administrator accounts, assign security roles, and monitor user access credentials.
             </p>
           </div>
 
-          {/* Primary Add User Button */}
-          <button
-            type="button"
-            onClick={handleOpenCreateDrawer}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-sm font-semibold rounded-xl transition-all cursor-pointer shadow-xs shadow-[#980e27]/20 shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add User</span>
-          </button>
+          {/* Create User Button */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleOpenCreateDrawer}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New User</span>
+            </button>
+          </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* 2. SUMMARY KPI CARDS                                                      */}
+        {/* 2. KPI STATISTICS OVERVIEW                                               */}
         {/* ========================================================================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Total Users */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/10">
+          {/* Total Accounts */}
+          <div className="bg-white rounded-xl p-4 border border-[#E5E7EB] shadow-2xs flex items-center justify-between">
+            <div>
+              <span className="text-xs font-medium text-[#718096]">Total Administrators</span>
+              <div className="text-xl font-bold text-[#172126] mt-1">{stats.total}</div>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-[#F3F5F6] flex items-center justify-center text-[#172126]">
               <Users className="w-5 h-5" />
             </div>
-            <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
-                {stats.total}
-              </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
-                Total Users
-              </span>
-            </div>
           </div>
 
-          {/* Card 2: Active Users */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/10">
+          {/* Active Accounts */}
+          <div className="bg-white rounded-xl p-4 border border-[#E5E7EB] shadow-2xs flex items-center justify-between">
+            <div>
+              <span className="text-xs font-medium text-[#718096]">Active Sessions</span>
+              <div className="text-xl font-bold text-[#276749] mt-1">{stats.active}</div>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-[#E6FFFA] flex items-center justify-center text-[#276749]">
               <UserCheck className="w-5 h-5" />
             </div>
-            <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
-                {stats.active}
-              </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
-                Active Accounts
-              </span>
-            </div>
           </div>
 
-          {/* Card 3: Inactive Users */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#F1F5F9] text-[#64748B] border border-[#CBD5E1]">
+          {/* Inactive Accounts */}
+          <div className="bg-white rounded-xl p-4 border border-[#E5E7EB] shadow-2xs flex items-center justify-between">
+            <div>
+              <span className="text-xs font-medium text-[#718096]">Inactive / Suspended</span>
+              <div className="text-xl font-bold text-[#E53E3E] mt-1">{stats.inactive}</div>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-[#FFF5F5] flex items-center justify-center text-[#E53E3E]">
               <UserX className="w-5 h-5" />
             </div>
-            <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
-                {stats.inactive}
-              </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
-                Inactive Accounts
-              </span>
-            </div>
           </div>
 
-          {/* Card 4: Administrators */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#E0F2FE] text-[#0369A1] border border-[#0369A1]/10">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
+          {/* Admin Count */}
+          <div className="bg-white rounded-xl p-4 border border-[#E5E7EB] shadow-2xs flex items-center justify-between">
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
-                {stats.admins}
-              </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
-                Administrators
-              </span>
+              <span className="text-xs font-medium text-[#718096]">Full Administrators</span>
+              <div className="text-xl font-bold text-[#0369A1] mt-1">{stats.admins}</div>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-[#E0F2FE] flex items-center justify-center text-[#0369A1]">
+              <ShieldCheck className="w-5 h-5" />
             </div>
           </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* 3. SEARCH AND FILTERS TOOLBAR                                            */}
+        {/* 3. FILTER & SEARCH CONTROLS                                              */}
         {/* ========================================================================= */}
-        <div className="bg-white p-4 rounded-xl border border-[#E5E7EB] shadow-2xs space-y-3">
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        <div className="bg-white rounded-xl p-4 border border-[#E5E7EB] shadow-2xs space-y-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 text-[#718096] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 text-[#718096] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by full name or email address..."
-                className="w-full h-10 pl-10 pr-4 bg-[#F3F5F6] text-sm text-[#172126] placeholder-[#718096] rounded-lg border border-transparent outline-hidden focus:border-[#980e27] focus:bg-white focus:ring-2 focus:ring-[#980e27]/20 transition-all"
+                placeholder="Search user name or email..."
+                className="w-full h-9 pl-9 pr-3 bg-[#F8FAFA] text-xs text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] focus:bg-white"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#718096] hover:text-[#172126]"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
-            {/* Filter Controls Right */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            {/* Role & Status Filter Dropdowns */}
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               {/* Role Filter */}
               <div className="flex items-center gap-1.5 bg-[#F3F5F6] px-3 py-2 rounded-lg border border-transparent hover:border-[#E5E7EB]">
                 <Shield className="w-3.5 h-3.5 text-[#718096]" />
@@ -554,9 +574,8 @@ export default function UsersManagementPage() {
                   className="bg-transparent text-xs font-medium text-[#172126] outline-hidden cursor-pointer"
                 >
                   <option value="All">All Roles</option>
-                  <option value="Super Admin">Super Admin</option>
-                  <option value="Administrator">Administrator</option>
-                  <option value="Editor">Editor</option>
+                  <option value="admin">Administrator</option>
+                  <option value="editor">Editor</option>
                 </select>
               </div>
 
@@ -710,17 +729,15 @@ export default function UsersManagementPage() {
                         <td className="py-4 px-5 text-sm font-medium text-[#172126]">
                           <div className="flex items-center gap-3">
                             <div
-                              className={`w-9 h-9 rounded-full ${item.avatarBgColor} font-bold text-xs flex items-center justify-center shrink-0 shadow-xs`}
+                              className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-2xs ${item.avatarBgColor}`}
                             >
                               {item.avatarInitials}
                             </div>
-                            <div className="space-y-0.5">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-[#172126] block">
-                                  {item.fullName}
-                                </span>
+                            <div>
+                              <div className="font-bold text-[#172126] flex items-center gap-1.5">
+                                <span>{item.fullName}</span>
                                 {item.isCurrentUser && (
-                                  <span className="px-1.5 py-0.2 text-[10px] font-extrabold bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/20 rounded-md uppercase">
+                                  <span className="px-1.5 py-0.5 bg-[#E2E8F0] text-[#475569] text-[10px] font-bold rounded-md uppercase">
                                     You
                                   </span>
                                 )}
@@ -729,53 +746,40 @@ export default function UsersManagementPage() {
                           </div>
                         </td>
 
-                        {/* Email Address */}
-                        <td className="py-4 px-5 text-xs text-[#475569]">
-                          <div className="flex items-center gap-1.5">
-                            <Mail className="w-3.5 h-3.5 text-[#718096]" />
-                            <span className="font-medium">{item.email}</span>
-                            <button
-                              type="button"
-                              onClick={(e) => handleCopyEmail(item.email, e)}
-                              className="p-0.5 text-[#718096] hover:text-[#980e27] rounded-sm transition-colors"
-                              title="Copy Email"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </button>
-                          </div>
+                        {/* Email */}
+                        <td className="py-4 px-5 text-xs text-[#475569] font-mono">
+                          {item.email}
                         </td>
 
-                        {/* Role Badges */}
-                        <td className="py-4 px-5 text-xs">
+                        {/* Role Badge */}
+                        <td className="py-4 px-5">
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                              item.role === "Super Admin"
-                                ? "bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/20"
-                                : item.role === "Administrator"
-                                ? "bg-[#E0F2FE] text-[#0369A1] border border-[#0369A1]/20"
-                                : "bg-[#FEF3C7] text-[#D97706] border border-[#FDE68A]"
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                              item.role === "Administrator"
+                                ? "bg-[#E0F2FE] text-[#0369A1]"
+                                : "bg-[#FEF3C7] text-[#D97706]"
                             }`}
                           >
-                            <Shield className="w-3 h-3" />
+                            <ShieldCheck className="w-3.5 h-3.5" />
                             {item.role}
                           </span>
                         </td>
 
-                        {/* Status Badges */}
-                        <td className="py-4 px-5 text-xs">
+                        {/* Status Badge */}
+                        <td className="py-4 px-5">
                           <button
                             type="button"
                             onClick={() => handleToggleUserStatus(item)}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold transition-opacity cursor-pointer ${
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer transition-colors ${
                               item.status === "Active"
-                                ? "bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/20 hover:opacity-80"
-                                : "bg-[#F1F5F9] text-[#64748B] border border-[#CBD5E1] hover:opacity-80"
+                                ? "bg-[#E6FFFA] text-[#276749] hover:bg-[#C6F6D5]"
+                                : "bg-[#FFF5F5] text-[#E53E3E] hover:bg-[#FED7D7]"
                             }`}
                             title="Click to toggle status"
                           >
                             <span
                               className={`w-1.5 h-1.5 rounded-full ${
-                                item.status === "Active" ? "bg-[#087F5B]" : "bg-[#64748B]"
+                                item.status === "Active" ? "bg-[#38A169]" : "bg-[#E53E3E]"
                               }`}
                             />
                             {item.status}
@@ -783,43 +787,39 @@ export default function UsersManagementPage() {
                         </td>
 
                         {/* Last Login */}
-                        <td className="py-4 px-5 text-xs text-[#64748B]">
+                        <td className="py-4 px-5 text-xs text-[#718096]">
                           {item.lastLogin}
                         </td>
 
                         {/* Created Date */}
-                        <td className="py-4 px-5 text-xs text-[#64748B]">
+                        <td className="py-4 px-5 text-xs text-[#718096]">
                           {item.createdDate}
                         </td>
 
                         {/* Actions */}
-                        <td className="py-4 px-5 text-sm text-right">
+                        <td className="py-4 px-5 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => handleOpenEditDrawer(item)}
-                              className="p-1.5 text-[#718096] hover:text-[#980e27] hover:bg-[#FFF5F7] rounded-md transition-colors"
-                              title="Edit User"
+                              className="p-1.5 text-[#718096] hover:text-[#980e27] hover:bg-[#FFF5F7] rounded-lg transition-colors cursor-pointer"
+                              title="Edit User Details"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
-                                setResetTargetUser(item);
-                                setTempPassword(null);
-                              }}
-                              className="p-1.5 text-[#718096] hover:text-[#0369A1] hover:bg-[#E0F2FE] rounded-md transition-colors"
-                              title="Reset Password"
+                              onClick={() => setResetTargetUser(item)}
+                              className="p-1.5 text-[#718096] hover:text-[#0369A1] hover:bg-[#E0F2FE]/50 rounded-lg transition-colors cursor-pointer"
+                              title="Reset User Password"
                             >
                               <KeyRound className="w-4 h-4" />
                             </button>
                             <button
                               type="button"
                               onClick={() => setDeleteTarget(item)}
-                              disabled={item.isCurrentUser}
-                              className="p-1.5 text-[#718096] hover:text-[#E53E3E] hover:bg-[#FFF5F5] rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                              title={item.isCurrentUser ? "Cannot delete self" : "Delete User"}
+                              className="p-1.5 text-[#718096] hover:text-[#E53E3E] hover:bg-[#FFF5F5] rounded-lg transition-colors cursor-pointer"
+                              title="Delete User Account"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -832,75 +832,40 @@ export default function UsersManagementPage() {
               </table>
             </div>
           )}
-
-          {/* Pagination Footer */}
-          <div className="px-5 py-3.5 border-t border-[#E5E7EB] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#718096]">
-            <div className="flex items-center gap-3">
-              <span>
-                Showing 1 to {filteredUsers.length} of {users.length} users
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-300">|</span>
-                <span>Rows per page:</span>
-                <select className="bg-[#F3F5F6] text-xs font-medium text-[#172126] px-2 py-1 rounded-md outline-hidden border border-[#E5E7EB] cursor-pointer">
-                  <option>10</option>
-                  <option>25</option>
-                  <option>50</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="p-1.5 border border-[#E5E7EB] rounded-md hover:bg-[#F8FAFA] disabled:opacity-50 cursor-pointer"
-                disabled
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="px-3 py-1 bg-[#980e27] text-white font-semibold rounded-md">
-                1
-              </span>
-              <button
-                type="button"
-                className="p-1.5 border border-[#E5E7EB] rounded-md hover:bg-[#F8FAFA] cursor-pointer"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* 5. ADD / EDIT USER SLIDE-OVER DRAWER                                      */}
+        {/* 5. SLIDE-OVER DRAWER FOR CREATE / EDIT USER                               */}
         {/* ========================================================================= */}
         {isDrawerOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-xs animate-in fade-in duration-200">
-            <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col justify-between border-l border-[#E5E7EB] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between border-l border-[#E5E7EB] animate-in slide-in-from-right duration-300">
               {/* Drawer Header */}
               <div className="p-5 border-b border-[#E5E7EB] flex items-center justify-between bg-[#F8FAFA]">
                 <div className="flex items-center gap-2">
-                  <UserIcon className="w-5 h-5 text-[#980e27]" />
+                  <div className="w-8 h-8 rounded-lg bg-[#FFF5F7] text-[#980e27] flex items-center justify-center border border-[#980e27]/20">
+                    <UserIcon className="w-4 h-4" />
+                  </div>
                   <div>
-                    <h3 className="text-base font-bold text-[#172126]">
-                      {editingUser ? "Edit User Account" : "Add New User Account"}
-                    </h3>
-                    <span className="text-xs text-[#718096]">
-                      Configure administrator credentials and access permissions.
-                    </span>
+                    <h2 className="text-base font-bold text-[#172126]">
+                      {editingUser ? "Edit User Account" : "Create New User Account"}
+                    </h2>
+                    <p className="text-xs text-[#718096]">
+                      {editingUser ? "Update profile details & security roles." : "Fill in account credentials and role."}
+                    </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsDrawerOpen(false)}
-                  className="p-1.5 text-[#718096] hover:text-[#172126] hover:bg-[#E5E7EB] rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-[#718096] hover:text-[#172126] hover:bg-white rounded-lg transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Drawer Form Body */}
-              <form onSubmit={handleSaveUser} className="p-6 space-y-5 flex-1">
+              {/* Drawer Body Form */}
+              <form onSubmit={handleSaveUser} className="p-6 space-y-4 overflow-y-auto flex-1">
                 {/* Full Name */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
@@ -911,9 +876,12 @@ export default function UsersManagementPage() {
                     required
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    placeholder="e.g. Ramesh Kumar"
+                    placeholder="Ramesh Kumar"
                     className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-xl border border-[#DDE3E0] outline-hidden focus:border-[#980e27] focus:ring-2 focus:ring-[#980e27]/20"
                   />
+                  {formErrors.name && (
+                    <p className="text-xs font-semibold text-[#E53E3E] mt-1">{formErrors.name.join(", ")}</p>
+                  )}
                 </div>
 
                 {/* Email Address */}
@@ -929,6 +897,9 @@ export default function UsersManagementPage() {
                     placeholder="ramesh.k@merchem.com"
                     className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-xl border border-[#DDE3E0] outline-hidden focus:border-[#980e27] focus:ring-2 focus:ring-[#980e27]/20"
                   />
+                  {formErrors.email && (
+                    <p className="text-xs font-semibold text-[#E53E3E] mt-1">{formErrors.email.join(", ")}</p>
+                  )}
                 </div>
 
                 {/* Role Selector */}
@@ -938,13 +909,15 @@ export default function UsersManagementPage() {
                   </label>
                   <select
                     value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value as "admin" | "editor" })}
                     className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-xl border border-[#DDE3E0] outline-hidden focus:border-[#980e27] cursor-pointer"
                   >
-                    <option value="Editor">Editor (Manage Products & Blogs)</option>
-                    <option value="Administrator">Administrator (Full Content Control)</option>
-                    <option value="Super Admin">Super Admin (Full System Access)</option>
+                    <option value="editor">Editor (Manage Products & Content)</option>
+                    <option value="admin">Administrator (Full System Control)</option>
                   </select>
+                  {formErrors.role && (
+                    <p className="text-xs font-semibold text-[#E53E3E] mt-1">{formErrors.role.join(", ")}</p>
+                  )}
                 </div>
 
                 {/* Status Selector */}
@@ -954,12 +927,15 @@ export default function UsersManagementPage() {
                   </label>
                   <select
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as "Active" | "Inactive" })}
                     className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-xl border border-[#DDE3E0] outline-hidden focus:border-[#980e27] cursor-pointer"
                   >
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                   </select>
+                  {formErrors.status && (
+                    <p className="text-xs font-semibold text-[#E53E3E] mt-1">{formErrors.status.join(", ")}</p>
+                  )}
                 </div>
 
                 {/* Password Fields (Only for New Users) */}
@@ -990,6 +966,9 @@ export default function UsersManagementPage() {
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
+                      {formErrors.password && (
+                        <p className="text-xs font-semibold text-[#E53E3E] mt-1">{formErrors.password.join(", ")}</p>
+                      )}
                     </div>
 
                     <div className="space-y-1.5">

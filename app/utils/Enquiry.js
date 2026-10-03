@@ -1,37 +1,60 @@
 import api from "./axios";
-import { createPublicTdsRequestApi, getTdsRequestsApi } from "./tdsRequest";
+import {
+  createPublicTdsRequestApi,
+  getTdsRequestsApi,
+} from "./tdsRequest";
 
-/**
- * =========================================================================
- * ENQUIRY & PUBLIC REQUEST API ENDPOINTS
- * =========================================================================
- */
-
-/**
- * Submit Public TDS Request
- * POST /v1/public/tds-requests
- * 
- * Payload:
- * {
- *   "product_id": 24,
- *   "name": "John Mathew",
- *   "company_name": "ABC Rubber Pvt Ltd",
- *   "email": "john@abcrubber.com",
- *   "phone": "+91 9876543210",
- *   "location": "Kochi, India",
- *   "message": "Please share the latest TDS document."
- * }
- */
-export const createPublicTdsRequestApi = createPublicTdsRequestApi;
+export { createPublicTdsRequestApi, getTdsRequestsApi };
 export const submitPublicTdsRequestApi = createPublicTdsRequestApi;
 
 /**
- * Fetch Enquiries / TDS Requests
- * GET /v1/tds-requests
+ * Fetch Enquiries
+ * GET /v1/enquiries?search=John&status=new
+ * 
+ * @param {Object} params - { search, status, page, per_page }
  */
 export const getEnquiriesApi = async (params = {}) => {
   try {
-    const response = await api.get("/v1/tds-requests", { params });
+    const response = await api.get("/v1/enquiries", { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * View Single Enquiry Details
+ * GET /v1/enquiries/{id}
+ */
+export const getEnquiryByIdApi = async (id) => {
+  try {
+    const response = await api.get(`/v1/enquiries/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Update Enquiry Status
+ * PATCH /v1/enquiries/{id}
+ */
+export const updateEnquiryStatusApi = async (id, data) => {
+  try {
+    const response = await api.patch(`/v1/enquiries/${id}`, data);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Delete Single Enquiry
+ * DELETE /v1/enquiries/{id}
+ */
+export const deleteEnquiryApi = async (id) => {
+  try {
+    const response = await api.delete(`/v1/enquiries/${id}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -56,6 +79,9 @@ export default {
   createPublicTdsRequestApi,
   submitPublicTdsRequestApi,
   getEnquiriesApi,
+  getEnquiryByIdApi,
+  updateEnquiryStatusApi,
+  deleteEnquiryApi,
   createPublicEnquiryApi,
   getTdsRequestsApi,
 };
