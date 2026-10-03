@@ -13,19 +13,17 @@ import {
   Clock,
   PlusCircle,
   FolderPlus,
-  FilePlus,
   Mail,
   ChevronRight,
   Edit2,
-  Eye,
   Activity,
-  CheckCircle2,
-  Image as ImageIcon,
-  MessageSquare,
   ArrowUpRight,
   FileCheck,
   Users,
   Loader2,
+  Globe,
+  Trash2,
+  BookOpen,
 } from "lucide-react";
 
 import { getDashboardApi } from "@/app/utils/dashboard";
@@ -40,6 +38,54 @@ const formatDate = (dateStr?: string) => {
     });
   } catch {
     return dateStr;
+  }
+};
+
+const renderActivityIcon = (iconType?: string) => {
+  switch (iconType) {
+    case "trash-2":
+    case "trash":
+    case "blog_deleted":
+      return <Trash2 className="w-3.5 h-3.5 text-[#DC2626]" />;
+    case "file-edit":
+    case "blog_updated":
+      return <Edit2 className="w-3.5 h-3.5 text-[#D97706]" />;
+    case "globe":
+    case "blog_published":
+      return <Globe className="w-3.5 h-3.5 text-[#059669]" />;
+    case "file-check":
+    case "tds":
+      return <FileCheck className="w-3.5 h-3.5 text-[#D97706]" />;
+    case "mail":
+    case "enquiry":
+    case "enquiry_created":
+      return <Mail className="w-3.5 h-3.5 text-[#2563EB]" />;
+    default:
+      return <Activity className="w-3.5 h-3.5 text-[#980e27]" />;
+  }
+};
+
+const getActivityBadgeBg = (iconType?: string) => {
+  switch (iconType) {
+    case "trash-2":
+    case "trash":
+    case "blog_deleted":
+      return "bg-[#FEF2F2] border-[#DC2626]/10";
+    case "file-edit":
+    case "blog_updated":
+      return "bg-[#FEF3C7] border-[#D97706]/10";
+    case "globe":
+    case "blog_published":
+      return "bg-[#E6F4EA] border-[#087F5B]/10";
+    case "file-check":
+    case "tds":
+      return "bg-[#FEF3C7] border-[#D97706]/10";
+    case "mail":
+    case "enquiry":
+    case "enquiry_created":
+      return "bg-[#EFF6FF] border-[#2563EB]/10";
+    default:
+      return "bg-[#FFF5F7] border-[#980e27]/10";
   }
 };
 
@@ -77,6 +123,72 @@ export default function DashboardPage() {
     };
   }, []);
 
+  // Consolidate recent activity items from recent_notifications, recent_enquiries, and recent_tds_requests
+  const getActivityItems = () => {
+    if (!dashboardData) return [];
+    const items: any[] = [];
+    const seenKeys = new Set<string>();
+
+    // 1. Recent Notifications
+    if (Array.isArray(dashboardData.recent_notifications)) {
+      dashboardData.recent_notifications.forEach((notif: any) => {
+        const key = `notif-${notif.id}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          items.push({
+            id: key,
+            title: notif.title || "Notification",
+            message: notif.message,
+            date: notif.created_at,
+            url: notif.action_url || "#",
+            iconType: notif.icon || notif.type,
+          });
+        }
+      });
+    }
+
+    // 2. Recent Enquiries (if not redundant)
+    if (Array.isArray(dashboardData.recent_enquiries)) {
+      dashboardData.recent_enquiries.forEach((enq: any) => {
+        const key = `enq-${enq.id}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          items.push({
+            id: key,
+            title: `New enquiry from ${enq.full_name || enq.name || "Customer"}`,
+            message: `${enq.company_name || "Company"} - ${enq.subject || enq.enquiry_type || "Enquiry"}`,
+            date: enq.created_at,
+            url: "/website-management/enquiries",
+            iconType: "enquiry_created",
+          });
+        }
+      });
+    }
+
+    // 3. Recent TDS Requests (if not redundant)
+    if (Array.isArray(dashboardData.recent_tds_requests)) {
+      dashboardData.recent_tds_requests.forEach((tds: any) => {
+        const key = `tds-${tds.id}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          items.push({
+            id: key,
+            title: `TDS requested for ${tds.product?.name || "Product"}`,
+            message: `Requested by ${tds.name || tds.email || "User"}`,
+            date: tds.created_at,
+            url: "/website-management/tds-requests",
+            iconType: "tds",
+          });
+        }
+      });
+    }
+
+    // Sort by date descending
+    return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
+  const activityItems = getActivityItems();
+
   return (
     <DashboardLayout activeNavId="dashboard">
       <div className="space-y-6 w-full pb-12 select-none">
@@ -85,10 +197,7 @@ export default function DashboardPage() {
         {/* ========================================================================= */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            {/* Breadcrumb */}
             <BreadCrumbs items={[{ label: "Dashboard" }]} />
-
-            {/* Page Heading & Subtitle */}
             <h1 className="text-2xl font-bold text-[#172126] tracking-tight">
               Dashboard Overview
             </h1>
@@ -97,7 +206,6 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* Date Indicator Badge */}
           <div className="inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-[#E5E7EB] rounded-xl text-xs font-medium text-[#475569] shadow-2xs self-start sm:self-auto">
             <Calendar className="w-4 h-4 text-[#980e27]" />
             <span>{currentDate}</span>
@@ -107,7 +215,7 @@ export default function DashboardPage() {
         {/* ========================================================================= */}
         {/* 2. OVERVIEW STATISTIC (KPI) CARDS                                         */}
         {/* ========================================================================= */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3.5">
           {/* Card 1: Total Products */}
           <div className="bg-white p-4 rounded-xl border border-[#E5E7EB] shadow-2xs hover:border-[#980e27]/30 transition-all">
             <div className="flex items-center justify-between">
@@ -208,8 +316,28 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Card 6: Admin Users */}
-          <div className="bg-white p-4 rounded-xl border border-[#E5E7EB] shadow-2xs hover:border-[#7C3AED]/30 transition-all">
+          {/* Card 6: Blogs */}
+          <div className="bg-white p-4 rounded-xl border border-[#E5E7EB] shadow-2xs hover:border-[#DB2777]/30 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
+                Blogs
+              </span>
+              <div className="p-2 rounded-lg bg-[#FDF2F8] text-[#DB2777] border border-[#DB2777]/10">
+                <BookOpen className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <span className="text-2xl font-bold text-[#172126] tracking-tight">
+                {loading ? "..." : (dashboardData?.stats?.blogs?.total ?? 0)}
+              </span>
+              <p className="text-[11px] text-[#64748B] mt-0.5 font-normal">
+                Published & drafts
+              </p>
+            </div>
+          </div>
+
+          {/* Card 7: Admin Users */}
+          <div className="bg-white p-4 rounded-xl border border-[#E5E7EB] shadow-2xs hover:border-[#7C3AED]/30 transition-all col-span-2 sm:col-span-1">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
                 Admin Users
@@ -252,76 +380,52 @@ export default function DashboardPage() {
                   <Loader2 className="w-5 h-5 animate-spin text-[#980e27]" />
                   <span>Loading recent activity...</span>
                 </div>
+              ) : activityItems.length === 0 ? (
+                <div className="py-6 text-center text-xs text-[#718096]">
+                  No recent activity recorded yet.
+                </div>
               ) : (
-                <>
-                  {/* Render recent enquiries if available */}
-                  {(dashboardData?.recent_enquiries || []).map((enq: any) => (
-                    <div
-                      key={`enq-${enq.id}`}
-                      className="flex items-start justify-between gap-3 p-2.5 rounded-lg hover:bg-[#F8FAFA] transition-colors"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="p-1.5 rounded-md bg-[#EFF6FF] text-[#2563EB] border border-[#2563EB]/10 shrink-0 mt-0.5">
-                          <Mail className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-[#172126] leading-snug">
-                            New enquiry from <span className="font-bold">{enq.full_name || enq.name}</span> ({enq.company_name || "Company"})
+                activityItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    className="flex items-start justify-between gap-3 p-2.5 rounded-lg hover:bg-[#F8FAFA] transition-colors border border-transparent hover:border-[#E5E7EB]"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`p-1.5 rounded-md border shrink-0 mt-0.5 ${getActivityBadgeBg(
+                          item.iconType
+                        )}`}
+                      >
+                        {renderActivityIcon(item.iconType)}
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-[#172126] leading-snug">
+                          {item.title}
+                        </p>
+                        {item.message && (
+                          <p className="text-[11px] text-[#64748B] mt-0.5">
+                            {item.message}
                           </p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <Clock className="w-3 h-3 text-[#64748B]" />
-                            <span className="text-[11px] text-[#64748B]">
-                              {formatDate(enq.created_at)}
-                            </span>
-                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Clock className="w-3 h-3 text-[#94A3B8]" />
+                          <span className="text-[11px] text-[#94A3B8]">
+                            {formatDate(item.date)}
+                          </span>
                         </div>
                       </div>
+                    </div>
+
+                    {item.url && item.url !== "#" && (
                       <Link
-                        href="/website-management/enquiries"
+                        href={item.url}
                         className="text-xs font-semibold text-[#980e27] hover:underline shrink-0"
                       >
                         View
                       </Link>
-                    </div>
-                  ))}
-
-                  {/* Render recent TDS requests if available */}
-                  {(dashboardData?.recent_tds_requests || []).map((tds: any) => (
-                    <div
-                      key={`tds-${tds.id}`}
-                      className="flex items-start justify-between gap-3 p-2.5 rounded-lg hover:bg-[#F8FAFA] transition-colors"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="p-1.5 rounded-md bg-[#FEF3C7] text-[#D97706] border border-[#D97706]/10 shrink-0 mt-0.5">
-                          <FileCheck className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-[#172126] leading-snug">
-                            TDS requested for <span className="font-bold">{tds.product?.name || "Product"}</span> by {tds.name || tds.email}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <Clock className="w-3 h-3 text-[#64748B]" />
-                            <span className="text-[11px] text-[#64748B]">
-                              {formatDate(tds.created_at)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <Link
-                        href="/website-management/tds-requests"
-                        className="text-xs font-semibold text-[#980e27] hover:underline shrink-0"
-                      >
-                        View
-                      </Link>
-                    </div>
-                  ))}
-
-                  {(!dashboardData?.recent_enquiries?.length && !dashboardData?.recent_tds_requests?.length) && (
-                    <div className="py-6 text-center text-xs text-[#718096]">
-                      No recent submission activity recorded yet.
-                    </div>
-                  )}
-                </>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           </div>
@@ -498,7 +602,7 @@ export default function DashboardPage() {
                         <td className="py-3 px-4 text-xs text-[#64748B]">
                           {formatDate(prod.created_at || prod.updated_at)}
                         </td>
-                        <td className="py-3 px-4 text-xs text-right">
+                        <td className="py-3 px-4 text-xs text-[#172126] text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Link
                               href="/product/all-products"
