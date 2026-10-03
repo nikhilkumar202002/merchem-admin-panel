@@ -15,6 +15,7 @@ import {
   createProductApi,
   updateProductApi,
   deleteProductApi,
+  deleteProductTdsApi,
 } from "../../utils/product";
 import {
   Package,
@@ -141,6 +142,10 @@ export default function AllProductsPage() {
 
   // Delete Dialog State
   const [deleteModalId, setDeleteModalId] = useState<string | number | null>(null);
+
+  // TDS Delete State
+  const [tdsDeleteTarget, setTdsDeleteTarget] = useState<ProductItem | null>(null);
+  const [isDeletingTds, setIsDeletingTds] = useState(false);
 
   // Form Fields State (Matching exact backend fields)
   const [formData, setFormData] = useState({
@@ -407,6 +412,23 @@ export default function AllProductsPage() {
   const handleOpenTdsModal = (item: ProductItem) => {
     setTdsModalProduct(item);
     setIsTdsModalOpen(true);
+  };
+
+  // Delete TDS Document Handler
+  const handleConfirmDeleteTds = async () => {
+    if (!tdsDeleteTarget) return;
+    setIsDeletingTds(true);
+    try {
+      await deleteProductTdsApi(tdsDeleteTarget.id);
+      toast.success("TDS document deleted successfully!");
+      fetchProducts();
+    } catch (err: any) {
+      console.error("Failed to delete TDS document:", err);
+      toast.error(err?.message || "Failed to delete TDS document");
+    } finally {
+      setIsDeletingTds(false);
+      setTdsDeleteTarget(null);
+    }
   };
 
   // Open Drawer for Create
@@ -980,15 +1002,26 @@ export default function AllProductsPage() {
                         {/* TDS Document */}
                         <td className="py-4 px-5 text-xs">
                           {item.tds?.available || item.tds_document ? (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenTdsModal(item)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FFF5F7] text-[#980e27] hover:bg-[#980e27] hover:text-white border border-[#980e27]/20 transition-all font-medium cursor-pointer"
-                              title="Manage TDS Document"
-                            >
-                              <FileText className="w-3.5 h-3.5" />
-                              <span>v{item.tds?.version || item.tds_document_version || "1.0"}</span>
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenTdsModal(item)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FFF5F7] text-[#980e27] hover:bg-[#980e27] hover:text-white border border-[#980e27]/20 transition-all font-medium cursor-pointer"
+                                title="Manage TDS Document"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>v{item.tds?.version || item.tds_document_version || "1.0"}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setTdsDeleteTarget(item)}
+                                className="p-1.5 text-[#B91C1C] hover:bg-[#FEF2F2] hover:text-[#991B1B] rounded-lg border border-transparent hover:border-[#FCA5A5] transition-all cursor-pointer"
+                                title="Delete TDS Document"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-[#B91C1C]" />
+                              </button>
+                            </div>
                           ) : (
                             <button
                               type="button"
@@ -1446,6 +1479,18 @@ export default function AllProductsPage() {
         onSuccess={() => {
           fetchProducts();
         }}
+      />
+
+      {/* TDS Document Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={Boolean(tdsDeleteTarget)}
+        onClose={() => setTdsDeleteTarget(null)}
+        onConfirm={handleConfirmDeleteTds}
+        isDeleting={isDeletingTds}
+        title="Delete TDS Document?"
+        itemName={tdsDeleteTarget?.tds?.file_name || tdsDeleteTarget?.tds_document_name || "TDS Document"}
+        itemType="TDS document"
+        description={`Are you sure you want to delete the active TDS document for "${tdsDeleteTarget?.name}"? This action cannot be undone.`}
       />
     </DashboardLayout>
   );
