@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
+import { toast } from "../../component/common/Toast";
 import {
   getProductCategoriesApi,
   createProductCategoryApi,
@@ -191,8 +192,10 @@ export default function MainCategoriesPage() {
       fd.append("name", target.name);
       fd.append("status", newStatus.toLowerCase());
       await updateProductCategoryApi(id, fd);
+      toast.success(`Category status updated to ${newStatus}`);
     } catch (err) {
       console.error("Toggle status error:", err);
+      toast.error("Failed to update category status");
     }
   };
 
@@ -269,9 +272,11 @@ export default function MainCategoriesPage() {
       if (editingCategory) {
         // Edit category API
         await updateProductCategoryApi(editingCategory.id, payload);
+        toast.success(`Category "${formData.name}" updated successfully!`);
       } else {
         // Create category API
         await createProductCategoryApi(payload);
+        toast.success(`Category "${formData.name}" created successfully!`);
       }
 
       await fetchCategories();
@@ -283,6 +288,7 @@ export default function MainCategoriesPage() {
         (err?.errors ? Object.values(err.errors).flat().join(" ") : null) ||
         "Failed to save category. Please verify your inputs.";
       setDrawerError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSaving(false);
     }
@@ -292,6 +298,7 @@ export default function MainCategoriesPage() {
   const handleAttemptDelete = (category: MainCategoryItem) => {
     if (category.subcategoryCount > 0) {
       setShowBlockedDeleteModal(category);
+      toast.warning("Cannot delete category containing active subcategories");
     } else {
       setDeleteTarget(category);
     }
@@ -302,9 +309,11 @@ export default function MainCategoriesPage() {
     if (deleteTarget) {
       try {
         await deleteProductCategoryApi(deleteTarget.id);
+        toast.success(`Category "${deleteTarget.name}" deleted successfully!`);
         await fetchCategories();
       } catch (err) {
         console.error("Delete category error:", err);
+        toast.error("Failed to delete category");
         setCategories((prev) => prev.filter((c) => c.id !== deleteTarget.id));
       } finally {
         setSelectedCategoryIds((prev) => prev.filter((id) => id !== deleteTarget.id));

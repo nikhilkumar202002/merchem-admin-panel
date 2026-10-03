@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
+import { toast } from "../../component/common/Toast";
 import {
   getProductCategoriesApi,
   getProductSubcategoriesApi,
@@ -291,50 +292,21 @@ function SubcategoriesContent() {
     try {
       if (editingSubcategory) {
         await updateProductSubcategoryApi(editingSubcategory.id, payload);
+        toast.success(`Subcategory "${formData.name}" updated successfully!`);
       } else {
         await createProductSubcategoryApi(payload);
+        toast.success(`Subcategory "${formData.name}" created successfully!`);
       }
 
       await fetchSubcategories();
       setIsDrawerOpen(false);
     } catch (err: any) {
       console.error("Save subcategory error:", err);
-      // Fallback update
-      if (editingSubcategory) {
-        setSubcategories((prev) =>
-          prev.map((item) =>
-            item.id === editingSubcategory.id
-              ? {
-                  ...item,
-                  name: formData.name,
-                  slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-                  mainCategoryId: parentCategoryObj.id,
-                  mainCategoryName: parentCategoryObj.name,
-                  shortDescription: formData.shortDescription,
-                  description: formData.description,
-                  status: formData.status,
-                  order: Number(formData.order),
-                }
-              : item
-          )
-        );
-      } else {
-        const newSub: SubcategoryItem = {
-          id: `sub-${Date.now()}`,
-          order: Number(formData.order),
-          name: formData.name,
-          slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"),
-          mainCategoryId: parentCategoryObj.id,
-          mainCategoryName: parentCategoryObj.name,
-          shortDescription: formData.shortDescription,
-          description: formData.description,
-          productCount: 0,
-          status: formData.status,
-          createdAt: "Just now",
-        };
-        setSubcategories((prev) => [...prev, newSub]);
-      }
-      setIsDrawerOpen(false);
+      const errMsg =
+        err?.message ||
+        (err?.errors ? Object.values(err.errors).flat().join(" ") : null) ||
+        "Failed to save subcategory.";
+      toast.error(errMsg);
     } finally {
       setIsSaving(false);
     }
@@ -344,6 +316,7 @@ function SubcategoriesContent() {
   const handleAttemptDelete = (sub: SubcategoryItem) => {
     if (sub.productCount > 0) {
       setShowBlockedModal(sub);
+      toast.warning("Cannot delete subcategory containing active products");
     } else {
       setDeleteTarget(sub);
     }
@@ -354,9 +327,11 @@ function SubcategoriesContent() {
     if (deleteTarget) {
       try {
         await deleteProductSubcategoryApi(deleteTarget.id);
+        toast.success(`Subcategory "${deleteTarget.name}" deleted successfully!`);
         await fetchSubcategories();
       } catch (err) {
         console.error("Delete subcategory error:", err);
+        toast.error("Failed to delete subcategory");
         setSubcategories((prev) => prev.filter((s) => s.id !== deleteTarget.id));
       } finally {
         setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.id));

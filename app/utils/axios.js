@@ -11,7 +11,7 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Request Interceptor: Attach bearer token if available
+// Request Interceptor: Attach bearer token and handle FormData boundary
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
@@ -20,6 +20,13 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
+
+    // Let Axios & browser generate proper multipart/form-data boundary for FormData
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
