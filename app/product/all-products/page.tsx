@@ -6,6 +6,7 @@ import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
 import { toast } from "../../component/common/Toast";
 import ProductView from "../components/ProductView";
+import ProductTDS from "../components/ProductTDS";
 import {
   getProductCategoriesApi,
   getProductSubcategoriesApi,
@@ -61,6 +62,17 @@ export interface ProductItem {
   image?: string | null;
   seoTitle?: string;
   seoDescription?: string;
+  tds_document?: string | null;
+  tds_document_name?: string | null;
+  tds_document_version?: string | null;
+  tds_uploaded_at?: string | null;
+  tds?: {
+    available?: boolean;
+    file_name?: string;
+    url?: string;
+    version?: string;
+    uploaded_at?: string;
+  };
 }
 
 // Subcategory to Main Category mapping dictionary
@@ -129,6 +141,10 @@ export default function AllProductsPage() {
   const [viewingProduct, setViewingProduct] = useState<ProductItem | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isLoadingViewDetails, setIsLoadingViewDetails] = useState(false);
+
+  // TDS Upload Modal State
+  const [tdsModalProduct, setTdsModalProduct] = useState<ProductItem | null>(null);
+  const [isTdsModalOpen, setIsTdsModalOpen] = useState(false);
 
   // Delete Dialog State
   const [deleteModalId, setDeleteModalId] = useState<string | number | null>(null);
@@ -232,6 +248,11 @@ export default function AllProductsPage() {
             : null,
           seoTitle: item.seo_title || "",
           seoDescription: item.seo_description || "",
+          tds_document: item.tds_document || null,
+          tds_document_name: item.tds_document_name || null,
+          tds_document_version: item.tds_document_version || null,
+          tds_uploaded_at: item.tds_uploaded_at || null,
+          tds: item.tds || null,
         }));
         setProducts(mapped);
       }
@@ -354,6 +375,12 @@ export default function AllProductsPage() {
   const handleOpenViewDrawer = (item: ProductItem) => {
     setViewingProduct(item);
     setIsViewModalOpen(true);
+  };
+
+  // Open TDS Upload Modal
+  const handleOpenTdsModal = (item: ProductItem) => {
+    setTdsModalProduct(item);
+    setIsTdsModalOpen(true);
   };
 
   // Open Drawer for Create
@@ -853,6 +880,9 @@ export default function AllProductsPage() {
                     <th className="py-3.5 px-5 text-xs font-semibold text-[#718096] uppercase tracking-wider">
                       Status
                     </th>
+                    <th className="py-3.5 px-5 text-xs font-semibold text-[#718096] uppercase tracking-wider">
+                      TDS Document
+                    </th>
                     <th className="py-3.5 px-5 text-xs font-semibold text-[#718096] uppercase tracking-wider text-right">
                       Actions
                     </th>
@@ -956,9 +986,42 @@ export default function AllProductsPage() {
                           </span>
                         </td>
 
+                        {/* TDS Document */}
+                        <td className="py-4 px-5 text-xs">
+                          {item.tds?.available || item.tds_document ? (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenTdsModal(item)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FFF5F7] text-[#980e27] hover:bg-[#980e27] hover:text-white border border-[#980e27]/20 transition-all font-medium cursor-pointer"
+                              title="Manage TDS Document"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>v{item.tds?.version || item.tds_document_version || "1.0"}</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenTdsModal(item)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F8FAFA] text-[#718096] hover:bg-[#E5E7EB] hover:text-[#172126] border border-[#E5E7EB] transition-all font-medium cursor-pointer"
+                              title="Upload TDS Document"
+                            >
+                              <FileUp className="w-3.5 h-3.5 text-[#980e27]" />
+                              <span>Upload TDS</span>
+                            </button>
+                          )}
+                        </td>
+
                         {/* Row Actions */}
                         <td className="py-4 px-5 text-sm text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenTdsModal(item)}
+                              className="p-1.5 text-[#718096] hover:text-[#980e27] hover:bg-[#FFF5F7] rounded-md transition-colors cursor-pointer"
+                              title="Upload / Manage TDS Document"
+                            >
+                              <FileUp className="w-4 h-4" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleOpenViewDrawer(item)}
@@ -1448,6 +1511,21 @@ export default function AllProductsPage() {
           setIsViewModalOpen(false);
           setViewingProduct(null);
           handleOpenEditDrawer(prod);
+        }}
+      />
+
+      {/* ========================================================================= */}
+      {/* 6. TDS UPLOAD & MANAGEMENT MODAL                                         */}
+      {/* ========================================================================= */}
+      <ProductTDS
+        product={tdsModalProduct}
+        isOpen={isTdsModalOpen}
+        onClose={() => {
+          setIsTdsModalOpen(false);
+          setTdsModalProduct(null);
+        }}
+        onSuccess={() => {
+          fetchProducts();
         }}
       />
     </DashboardLayout>
