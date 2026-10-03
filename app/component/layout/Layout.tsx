@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import { isAuthenticated } from "@/app/utils/auth";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -15,7 +17,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   activeNavId = "main-categories",
   onSelectNav,
 }) => {
+  const router = useRouter();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.replace("/login");
+    }
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-[#F5F7F6] flex flex-col font-sans">

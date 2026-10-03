@@ -38,8 +38,11 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
-        // Redirect to login or clear auth on unauthorized response
         localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+        if (!window.location.pathname.startsWith("/login")) {
+          window.location.href = "/login";
+        }
       }
     }
     return Promise.reject(error);

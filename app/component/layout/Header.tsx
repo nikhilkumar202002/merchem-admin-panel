@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
-import { getMeApi, logoutApi, getStoredUser } from "@/app/utils/auth";
+import { getMeApi, logoutApi, getStoredUser, isAuthenticated } from "@/app/utils/auth";
 import {
   getNotificationsApi,
   getUnreadNotificationsCountApi,
@@ -88,18 +88,21 @@ const Header: React.FC<HeaderProps> = ({
       setCurrentUser(stored);
     }
 
-    getMeApi()
-      .then((res: any) => {
-        const u = res.user || res.data?.user || res;
-        if (u) setCurrentUser(u);
-      })
-      .catch(() => {
-        // Silent fallback
-      });
+    if (isAuthenticated()) {
+      getMeApi()
+        .then((res: any) => {
+          const u = res.user || res.data?.user || res;
+          if (u) setCurrentUser(u);
+        })
+        .catch(() => {
+          // Silent fallback
+        });
+    }
   }, []);
 
   // Fetch Notifications & Unread Count from Real API
   const fetchNotificationsData = async () => {
+    if (!isAuthenticated()) return;
     setLoadingNotifications(true);
     try {
       const [listRes, countRes] = await Promise.all([

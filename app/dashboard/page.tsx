@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { getDashboardApi } from "@/app/utils/dashboard";
+import { isAuthenticated } from "@/app/utils/auth";
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return "Just now";
@@ -103,6 +104,7 @@ export default function DashboardPage() {
   useEffect(() => {
     let isMounted = true;
     const fetchDashboard = async () => {
+      if (!isAuthenticated()) return;
       setLoading(true);
       try {
         const res = await getDashboardApi();
