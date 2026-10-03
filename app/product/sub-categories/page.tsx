@@ -48,122 +48,13 @@ export interface SubcategoryItem {
   image?: string | null;
 }
 
-const initialSubcategories: SubcategoryItem[] = [
-  {
-    id: "sub-1",
-    order: 1,
-    name: "Thiazoles",
-    slug: "thiazoles",
-    mainCategoryId: "cat-1",
-    mainCategoryName: "Rubber Accelerators",
-    description: "Semi-ultra primary accelerators giving fast cure rates and heat resistance in NR, SBR and NBR.",
-    productCount: 14,
-    status: "Active",
-    createdAt: "10 Feb 2026",
-  },
-  {
-    id: "sub-2",
-    order: 2,
-    name: "Sulphenamides",
-    slug: "sulphenamides",
-    mainCategoryId: "cat-1",
-    mainCategoryName: "Rubber Accelerators",
-    description: "Delayed action accelerators providing high scorch safety and fast vulcanization rate.",
-    productCount: 10,
-    status: "Active",
-    createdAt: "12 Feb 2026",
-  },
-  {
-    id: "sub-3",
-    order: 3,
-    name: "Thiurams",
-    slug: "thiurams",
-    mainCategoryId: "cat-1",
-    mainCategoryName: "Rubber Accelerators",
-    description: "Ultra accelerators and sulfur donors for heat resistant rubber compounds.",
-    productCount: 8,
-    status: "Active",
-    createdAt: "15 Feb 2026",
-  },
-  {
-    id: "sub-4",
-    order: 4,
-    name: "Dithiocarbamates",
-    slug: "dithiocarbamates",
-    mainCategoryId: "cat-1",
-    mainCategoryName: "Rubber Accelerators",
-    description: "Ultra accelerators for fast low temperature vulcanization and latex dipping.",
-    productCount: 12,
-    status: "Active",
-    createdAt: "18 Feb 2026",
-  },
-  {
-    id: "sub-5",
-    order: 5,
-    name: "Special Purpose",
-    slug: "special-purpose",
-    mainCategoryId: "cat-1",
-    mainCategoryName: "Rubber Accelerators",
-    description: "Custom formulated specialty accelerator blends for specific industrial requirements.",
-    productCount: 4,
-    status: "Active",
-    createdAt: "22 Feb 2026",
-  },
-  {
-    id: "sub-6",
-    order: 6,
-    name: "Amine-based",
-    slug: "amine-based",
-    mainCategoryId: "cat-2",
-    mainCategoryName: "Antioxidants & Antiozonants",
-    description: "High efficiency amine degradation inhibitors for dynamic flex and ozone protection.",
-    productCount: 9,
-    status: "Active",
-    createdAt: "01 Mar 2026",
-  },
-  {
-    id: "sub-7",
-    order: 7,
-    name: "Phenolic-based",
-    slug: "phenolic-based",
-    mainCategoryId: "cat-2",
-    mainCategoryName: "Antioxidants & Antiozonants",
-    description: "Non-staining sterically hindered phenolic antioxidants for light-colored rubber products.",
-    productCount: 7,
-    status: "Active",
-    createdAt: "05 Mar 2026",
-  },
-  {
-    id: "sub-8",
-    order: 8,
-    name: "Insoluble Sulfur",
-    slug: "insoluble-sulfur",
-    mainCategoryId: "cat-3",
-    mainCategoryName: "Vulcanizing Agents",
-    description: "Polymeric non-blooming sulfur vulcanizing agent for radial tyres and belt compounds.",
-    productCount: 6,
-    status: "Active",
-    createdAt: "10 Mar 2026",
-  },
-  {
-    id: "sub-9",
-    order: 9,
-    name: "Hydroquinone Derivatives",
-    slug: "hydroquinone-derivatives",
-    mainCategoryId: "cat-6",
-    mainCategoryName: "Polymerization Inhibitors",
-    description: "Shortstopping agents for synthetic rubber polymerization reactors.",
-    productCount: 0,
-    status: "Inactive",
-    createdAt: "20 Mar 2026",
-  },
-];
+const initialSubcategories: SubcategoryItem[] = [];
 
 function SubcategoriesContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
 
-  const [subcategories, setSubcategories] = useState<SubcategoryItem[]>(initialSubcategories);
+  const [subcategories, setSubcategories] = useState<SubcategoryItem[]>([]);
   const [categoriesList, setCategoriesList] = useState<{ id: string | number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

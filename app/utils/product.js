@@ -70,7 +70,12 @@ export const updateProductCategoryApi = async (id, data) => {
     let payload = data;
     let headers = {};
 
-    if (!(data instanceof FormData)) {
+    if (data instanceof FormData) {
+      if (!payload.has("_method")) {
+        payload.append("_method", "PUT");
+      }
+      headers["Content-Type"] = "multipart/form-data";
+    } else {
       payload = new FormData();
       Object.keys(data).forEach((key) => {
         if (data[key] !== null && data[key] !== undefined) {
@@ -164,7 +169,9 @@ export const createProductSubcategoryApi = async (data) => {
 export const updateProductSubcategoryApi = async (id, data) => {
   try {
     if (data instanceof FormData) {
-      data.append("_method", "PUT");
+      if (!data.has("_method")) {
+        data.append("_method", "PUT");
+      }
       const response = await api.post(`/v1/product-subcategories/${id}`, data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
@@ -262,7 +269,12 @@ export const updateProductApi = async (id, data) => {
     let payload = data;
     let headers = {};
 
-    if (!(data instanceof FormData)) {
+    if (data instanceof FormData) {
+      if (!payload.has("_method")) {
+        payload.append("_method", "PUT");
+      }
+      headers["Content-Type"] = "multipart/form-data";
+    } else {
       payload = new FormData();
       Object.keys(data).forEach((key) => {
         if (data[key] !== null && data[key] !== undefined) {

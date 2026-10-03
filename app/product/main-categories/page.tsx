@@ -42,71 +42,10 @@ export interface MainCategoryItem {
   image?: string | null;
 }
 
-const initialCategories: MainCategoryItem[] = [
-  {
-    id: "cat-1",
-    order: 1,
-    name: "Accelerators",
-    slug: "accelerators",
-    description: "Primary and secondary accelerators for rubber vulcanization including thiazoles and dithiocarbamates.",
-    subcategoryCount: 12,
-    status: "Active",
-    createdAt: "15 Jan 2026",
-  },
-  {
-    id: "cat-2",
-    order: 2,
-    name: "Antioxidants & Antiozonants",
-    slug: "antioxidants-antiozonants",
-    description: "Amine and phenolic degradation inhibitors protecting rubber products from heat, oxygen and ozone aging.",
-    subcategoryCount: 8,
-    status: "Active",
-    createdAt: "20 Jan 2026",
-  },
-  {
-    id: "cat-3",
-    order: 3,
-    name: "Processing Aids",
-    slug: "processing-aids",
-    description: "Internal and external lubricants, peptizers and viscosity modifiers for rubber compounding.",
-    subcategoryCount: 5,
-    status: "Active",
-    createdAt: "02 Feb 2026",
-  },
-  {
-    id: "cat-4",
-    order: 4,
-    name: "Agrochemical Intermediates",
-    slug: "agrochemical-intermediates",
-    description: "High-purity chemical intermediates and synthesis building blocks for crop protection formulations.",
-    subcategoryCount: 4,
-    status: "Active",
-    createdAt: "12 Feb 2026",
-  },
-  {
-    id: "cat-5",
-    order: 5,
-    name: "Specialty Solvents",
-    slug: "specialty-solvents",
-    description: "Aromatic and aliphatic reaction solvents for chemical extraction and industrial cleaning.",
-    subcategoryCount: 6,
-    status: "Active",
-    createdAt: "01 Mar 2026",
-  },
-  {
-    id: "cat-6",
-    order: 6,
-    name: "Polymerization Inhibitors",
-    slug: "polymerization-inhibitors",
-    description: "Monomer stabilizers and shortstopping agents preventing premature polymerization during storage.",
-    subcategoryCount: 0,
-    status: "Inactive",
-    createdAt: "15 Mar 2026",
-  },
-];
+const initialCategories: MainCategoryItem[] = [];
 
 export default function MainCategoriesPage() {
-  const [categories, setCategories] = useState<MainCategoryItem[]>(initialCategories);
+  const [categories, setCategories] = useState<MainCategoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [apiError, setApiError] = useState("");
