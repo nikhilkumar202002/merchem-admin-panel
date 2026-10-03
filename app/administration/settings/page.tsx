@@ -37,7 +37,6 @@ type SettingsTab =
   | "general"
   | "company"
   | "seo"
-  | "email"
   | "security"
   | "media";
 
@@ -87,25 +86,8 @@ export default function SettingsPage() {
     defaultSeoImage: "/chemical_bg.jpg",
     allowIndexing: true,
   });
-
   // ---------------------------------------------------------------------------
-  // Tab 4: Email Configuration State
-  // ---------------------------------------------------------------------------
-  const [emailSettings, setEmailSettings] = useState({
-    provider: "SendGrid Transactional API",
-    senderName: "Merchem India Support",
-    senderEmail: "noreply@merchem.com",
-    replyToEmail: "sales@merchem.com",
-    apiKeyMasked: "SG.****************************************************",
-    connectionStatus: "Connected & Verified (TLS 1.3)",
-  });
-
-  const [isTestEmailModalOpen, setIsTestEmailModalOpen] = useState(false);
-  const [testRecipientEmail, setTestRecipientEmail] = useState("nikhil.kumar@merchem.com");
-  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
-
-  // ---------------------------------------------------------------------------
-  // Tab 5: Security Settings State
+  // Tab 4: Security Settings State
   // ---------------------------------------------------------------------------
   const [securitySettings, setSecuritySettings] = useState({
     currentPassword: "",
@@ -120,7 +102,7 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
 
   // ---------------------------------------------------------------------------
-  // Tab 6: Media & Storage State
+  // Tab 5: Media & Storage State
   // ---------------------------------------------------------------------------
   const [mediaSettings, setMediaSettings] = useState({
     maxUploadSizeMb: 10,
@@ -139,21 +121,6 @@ export default function SettingsPage() {
       toast.success(`${sectionName} settings saved successfully!`);
     }, 600);
   };
-
-  // Test Email Execution
-  const handleSendTestEmail = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!testRecipientEmail) return;
-    setIsSendingTestEmail(true);
-
-    setTimeout(() => {
-      setIsSendingTestEmail(false);
-      setIsTestEmailModalOpen(false);
-      toast.success(`Test email sent successfully to ${testRecipientEmail}!`);
-    }, 1200);
-  };
-
-  // Handle Password Change Submission
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (!securitySettings.currentPassword || !securitySettings.newPassword) {
@@ -276,22 +243,6 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2.5">
                 <Globe className="w-4 h-4" />
                 <span>Website & SEO</span>
-              </div>
-              <ChevronRight className="w-4 h-4 opacity-70" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("email")}
-              className={`w-full flex items-center justify-between px-3.5 py-3 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                activeTab === "email"
-                  ? "bg-[#980e27] text-white shadow-xs"
-                  : "text-[#475569] hover:bg-[#FFF5F7] hover:text-[#980e27]"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Mail className="w-4 h-4" />
-                <span>Email Configuration</span>
               </div>
               <ChevronRight className="w-4 h-4 opacity-70" />
             </button>
@@ -659,114 +610,7 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* ------------------------------------------------------------------- */}
-            {/* TAB 4: EMAIL CONFIGURATION                                          */}
-            {/* ------------------------------------------------------------------- */}
-            {activeTab === "email" && (
-              <div className="bg-white rounded-xl border border-[#E5E7EB] shadow-2xs p-6 space-y-6">
-                <div className="pb-4 border-b border-[#E5E7EB] flex items-center justify-between">
-                  <h2 className="text-base font-bold text-[#172126] flex items-center gap-2">
-                    <Mail className="w-5 h-5 text-[#980e27]" />
-                    <span>Email & Transactional Delivery</span>
-                  </h2>
-                  <span className="text-xs font-semibold text-[#087F5B] bg-[#E6F4EA] px-2.5 py-1 rounded-full border border-[#087F5B]/20">
-                    {emailSettings.connectionStatus}
-                  </span>
-                </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
-                      Email Delivery Service Provider
-                    </label>
-                    <select
-                      value={emailSettings.provider}
-                      onChange={(e) => {
-                        setEmailSettings({ ...emailSettings, provider: e.target.value });
-                        setHasUnsavedChanges(true);
-                      }}
-                      className="w-full h-10 px-3 bg-white text-sm font-semibold text-[#172126] rounded-xl border border-[#DDE3E0] outline-hidden focus:border-[#980e27] cursor-pointer"
-                    >
-                      <option value="SendGrid Transactional API">SendGrid Transactional API</option>
-                      <option value="Amazon SES">Amazon SES (Simple Email Service)</option>
-                      <option value="Postmark">Postmark App</option>
-                      <option value="SMTP Server">Custom SMTP Server</option>
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
-                        Sender Display Name
-                      </label>
-                      <input
-                        type="text"
-                        value={emailSettings.senderName}
-                        onChange={(e) => {
-                          setEmailSettings({ ...emailSettings, senderName: e.target.value });
-                          setHasUnsavedChanges(true);
-                        }}
-                        className="w-full h-10 px-3.5 bg-white text-sm text-[#172126] rounded-xl border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
-                        Sender Email Address
-                      </label>
-                      <input
-                        type="email"
-                        value={emailSettings.senderEmail}
-                        onChange={(e) => {
-                          setEmailSettings({ ...emailSettings, senderEmail: e.target.value });
-                          setHasUnsavedChanges(true);
-                        }}
-                        className="w-full h-10 px-3.5 bg-white text-sm text-[#172126] rounded-xl border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Masked Secret API Key Indicator */}
-                  <div className="p-4 bg-[#F8FAFA] rounded-xl border border-[#E5E7EB] space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
-                        API Key Secret (Masked)
-                      </label>
-                      <span className="text-[11px] text-[#087F5B] font-semibold flex items-center gap-1">
-                        <Lock className="w-3 h-3" /> Encrypted on Server
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      readOnly
-                      value={emailSettings.apiKeyMasked}
-                      className="w-full h-9 px-3 bg-white text-xs font-mono text-[#718096] rounded-lg border border-[#E5E7EB] outline-hidden"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-[#E5E7EB] flex items-center justify-between gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsTestEmailModalOpen(true)}
-                    className="px-4 py-2.5 bg-white hover:bg-[#FFF5F7] border border-[#E5E7EB] hover:border-[#980e27]/30 text-xs font-semibold text-[#980e27] rounded-xl transition-colors cursor-pointer inline-flex items-center gap-2"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>Send Test Email</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSave("Email Configuration")}
-                    disabled={isSaving}
-                    className="px-5 py-2.5 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer inline-flex items-center gap-2"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Save Email Config</span>
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* ------------------------------------------------------------------- */}
             {/* TAB 5: SECURITY                                                     */}
@@ -995,69 +839,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* 3. TEST EMAIL MODAL                                                       */}
-        {/* ========================================================================= */}
-        {isTestEmailModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-[#E5E7EB] shadow-2xl space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#FFF5F7] text-[#980e27] flex items-center justify-center border border-[#980e27]/20 shrink-0">
-                  <Mail className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#172126]">Send Test Email</h3>
-                  <p className="text-xs text-[#718096]">
-                    Verify configured transactional email API connection.
-                  </p>
-                </div>
-              </div>
 
-              <form onSubmit={handleSendTestEmail} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-[#172126]">
-                    Recipient Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={testRecipientEmail}
-                    onChange={(e) => setTestRecipientEmail(e.target.value)}
-                    className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-xl border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsTestEmailModalOpen(false)}
-                    disabled={isSendingTestEmail}
-                    className="px-4 py-2 border border-[#E5E7EB] text-xs font-semibold text-[#475569] rounded-xl hover:bg-[#F8FAFA]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSendingTestEmail}
-                    className="px-5 py-2 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-xs font-semibold rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-2"
-                  >
-                    {isSendingTestEmail ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Sending Test Email...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        <span>Send Test Email</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );

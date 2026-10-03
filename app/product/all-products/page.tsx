@@ -9,6 +9,7 @@ import {
   getProductCategoriesApi,
   getProductSubcategoriesApi,
   getProductsApi,
+  getProductByIdApi,
   createProductApi,
   updateProductApi,
   deleteProductApi,
@@ -38,6 +39,7 @@ import {
   Sparkles,
   Loader2,
   FileUp,
+  Eye,
 } from "lucide-react";
 
 // Types
@@ -121,6 +123,11 @@ export default function AllProductsPage() {
   // Drawer / Form State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
+
+  // Single Product View Modal State
+  const [viewingProduct, setViewingProduct] = useState<ProductItem | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isLoadingViewDetails, setIsLoadingViewDetails] = useState(false);
 
   // Delete Dialog State
   const [deleteModalId, setDeleteModalId] = useState<string | number | null>(null);
@@ -340,6 +347,49 @@ export default function AllProductsPage() {
     setSelectedProductIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
+  };
+
+  // Open Single View Modal with Fresh Details from API
+  const handleOpenViewDrawer = async (item: ProductItem) => {
+    setViewingProduct(item);
+    setIsViewModalOpen(true);
+    setIsLoadingViewDetails(true);
+
+    try {
+      const res = await getProductByIdApi(item.id);
+      const data = res.data || res;
+      if (data && typeof data === "object") {
+        setViewingProduct((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: data.name || prev.name,
+                slug: data.slug || prev.slug,
+                mainCategory:
+                  data.product_category?.name ||
+                  data.category?.name ||
+                  prev.mainCategory,
+                subcategory:
+                  data.product_subcategory?.name ||
+                  data.subcategory?.name ||
+                  prev.subcategory,
+                shortDescription: data.short_description || prev.shortDescription,
+                fullDescription:
+                  data.full_description || data.description || prev.fullDescription,
+                applications: data.applications || prev.applications,
+                status: data.status === "inactive" ? "inactive" : "active",
+                image: data.image_url || data.image || prev.image,
+                seoTitle: data.seo_title || prev.seoTitle,
+                seoDescription: data.seo_description || prev.seoDescription,
+              }
+            : null
+        );
+      }
+    } catch (err) {
+      console.warn("Single view API fetch error, showing row data:", err);
+    } finally {
+      setIsLoadingViewDetails(false);
+    }
   };
 
   // Open Drawer for Create
@@ -867,7 +917,10 @@ export default function AllProductsPage() {
                         {/* Product Thumbnail & Name */}
                         <td className="py-4 px-5 text-sm font-medium text-[#172126]">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#E5E7EB] bg-[#F8FAFA] flex items-center justify-center shrink-0 relative">
+                            <div
+                              onClick={() => handleOpenViewDrawer(item)}
+                              className="w-10 h-10 rounded-lg overflow-hidden border border-[#E5E7EB] bg-[#F8FAFA] flex items-center justify-center shrink-0 relative cursor-pointer hover:opacity-80 transition-opacity"
+                            >
                               {item.image ? (
                                 <img
                                   src={item.image}
@@ -892,7 +945,10 @@ export default function AllProductsPage() {
                               </div>
                             </div>
                             <div>
-                              <span className="font-bold text-[#172126] block leading-snug">
+                              <span
+                                onClick={() => handleOpenViewDrawer(item)}
+                                className="font-bold text-[#172126] hover:text-[#980e27] cursor-pointer block leading-snug transition-colors"
+                              >
                                 {item.name}
                               </span>
                               <span className="text-xs font-mono text-[#718096] block">
@@ -939,6 +995,14 @@ export default function AllProductsPage() {
                         {/* Row Actions */}
                         <td className="py-4 px-5 text-sm text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenViewDrawer(item)}
+                              className="p-1.5 text-[#718096] hover:text-[#0369A1] hover:bg-[#F0F9FF] rounded-md transition-colors cursor-pointer"
+                              title="View product details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleOpenEditDrawer(item)}
@@ -1400,6 +1464,202 @@ export default function AllProductsPage() {
                 {isDeleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Confirm Bulk Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. SINGLE PRODUCT VIEW MODAL                                              */}
+      {/* ========================================================================= */}
+      {isViewModalOpen && viewingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-2xl w-full border border-[#E5E7EB] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-[#F8FAFA] border-b border-[#E5E7EB] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#FFF5F7] text-[#980e27] flex items-center justify-center border border-[#980e27]/20 font-bold shrink-0">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#172126] leading-tight">
+                    {viewingProduct.name}
+                  </h2>
+                  <span className="text-xs font-mono text-[#718096]">
+                    /{viewingProduct.slug}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsViewModalOpen(false);
+                  setViewingProduct(null);
+                }}
+                className="p-1.5 text-[#718096] hover:text-[#172126] hover:bg-[#E5E7EB]/50 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm text-[#172126]">
+              {isLoadingViewDetails && (
+                <div className="flex items-center gap-2 text-xs font-semibold text-[#980e27] bg-[#FFF5F7] px-3 py-1.5 rounded-lg border border-[#980e27]/20">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Loading full product specifications...</span>
+                </div>
+              )}
+
+              {/* Status & Categorization Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3 bg-[#F8FAFA] rounded-xl border border-[#E5E7EB] space-y-1">
+                  <span className="text-[11px] font-semibold text-[#718096] uppercase tracking-wider block">
+                    Status
+                  </span>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                      viewingProduct.status === "active"
+                        ? "bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/20"
+                        : "bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]"
+                    }`}
+                  >
+                    {viewingProduct.status === "active" ? "Active" : "Inactive"}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-[#F8FAFA] rounded-xl border border-[#E5E7EB] space-y-1">
+                  <span className="text-[11px] font-semibold text-[#718096] uppercase tracking-wider block">
+                    Main Category
+                  </span>
+                  <span className="text-xs font-bold text-[#172126] inline-flex items-center gap-1">
+                    <Layers className="w-3.5 h-3.5 text-[#980e27]" />
+                    {viewingProduct.mainCategory || "Uncategorized"}
+                  </span>
+                </div>
+
+                <div className="p-3 bg-[#F8FAFA] rounded-xl border border-[#E5E7EB] space-y-1">
+                  <span className="text-[11px] font-semibold text-[#718096] uppercase tracking-wider block">
+                    Subcategory
+                  </span>
+                  <span className="text-xs font-bold text-[#172126] inline-flex items-center gap-1">
+                    <FolderTree className="w-3.5 h-3.5 text-[#718096]" />
+                    {viewingProduct.subcategory || "None"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Image & Short Summary */}
+              {viewingProduct.image && (
+                <div className="p-4 bg-[#F8FAFA] rounded-xl border border-[#E5E7EB] flex flex-col sm:flex-row items-center gap-4">
+                  <div className="w-24 h-24 rounded-lg overflow-hidden border border-[#E5E7EB] bg-white shrink-0">
+                    <img
+                      src={viewingProduct.image}
+                      alt={viewingProduct.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="space-y-1 flex-1 text-center sm:text-left">
+                    <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider block">
+                      Product Preview Image
+                    </span>
+                    <p className="text-xs text-[#475569]">
+                      Uploaded chemical product graphic / package photo.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Short Description */}
+              {viewingProduct.shortDescription && (
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-bold text-[#172126] uppercase tracking-wider">
+                    Short Description
+                  </h4>
+                  <p className="p-3.5 bg-[#F8FAFA] rounded-xl border border-[#E5E7EB] text-xs text-[#475569] leading-relaxed">
+                    {viewingProduct.shortDescription}
+                  </p>
+                </div>
+              )}
+
+              {/* Full Description / Technical Overview */}
+              {viewingProduct.fullDescription && (
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-bold text-[#172126] uppercase tracking-wider">
+                    Technical Specifications & Overview
+                  </h4>
+                  <div className="p-3.5 bg-[#F8FAFA] rounded-xl border border-[#E5E7EB] text-xs text-[#475569] leading-relaxed whitespace-pre-line">
+                    {viewingProduct.fullDescription}
+                  </div>
+                </div>
+              )}
+
+              {/* Applications */}
+              {viewingProduct.applications && (
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-bold text-[#172126] uppercase tracking-wider">
+                    Key Applications & Industrial Uses
+                  </h4>
+                  <p className="p-3.5 bg-[#F8FAFA] rounded-xl border border-[#E5E7EB] text-xs text-[#475569] leading-relaxed">
+                    {viewingProduct.applications}
+                  </p>
+                </div>
+              )}
+
+              {/* SEO Details */}
+              {(viewingProduct.seoTitle || viewingProduct.seoDescription) && (
+                <div className="p-4 bg-[#F8FAFA] rounded-xl border border-[#E5E7EB] space-y-2">
+                  <h4 className="text-xs font-bold text-[#172126] uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#980e27]" />
+                    SEO Search Engine Metadata
+                  </h4>
+                  {viewingProduct.seoTitle && (
+                    <div className="text-xs">
+                      <span className="font-semibold text-[#718096]">Meta Title: </span>
+                      <span className="text-[#172126] font-medium">{viewingProduct.seoTitle}</span>
+                    </div>
+                  )}
+                  {viewingProduct.seoDescription && (
+                    <div className="text-xs">
+                      <span className="font-semibold text-[#718096]">Meta Description: </span>
+                      <span className="text-[#475569]">{viewingProduct.seoDescription}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-[#F8FAFA] border-t border-[#E5E7EB] flex items-center justify-between gap-3">
+              <span className="text-xs text-[#718096]">
+                Last updated: {viewingProduct.lastUpdated || "N/A"}
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const prod = viewingProduct;
+                    setIsViewModalOpen(false);
+                    setViewingProduct(null);
+                    handleOpenEditDrawer(prod);
+                  }}
+                  className="px-4 py-2 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Edit Product</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsViewModalOpen(false);
+                    setViewingProduct(null);
+                  }}
+                  className="px-4 py-2 border border-[#E5E7EB] text-xs font-semibold text-[#475569] rounded-xl hover:bg-white"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
