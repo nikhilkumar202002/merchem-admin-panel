@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { uploadProductTdsApi, deleteProductTdsApi } from "../../utils/product";
 
+import DeleteModal from "./DeleteModal";
+
 export interface ProductTDSProps {
   product: {
     id: number | string;
@@ -47,12 +49,12 @@ const ProductTDS: React.FC<ProductTDSProps> = ({
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      // Auto fill version to 1.0 or existing product tds version
       const existingVersion =
         product?.tds?.version ||
         product?.tds_document_version ||
@@ -61,6 +63,7 @@ const ProductTDS: React.FC<ProductTDSProps> = ({
       setSelectedFile(null);
       setError(null);
       setSuccessMsg(null);
+      setShowConfirmDelete(false);
     }
   }, [isOpen, product]);
 
@@ -155,17 +158,14 @@ const ProductTDS: React.FC<ProductTDSProps> = ({
     }
   };
 
-  const handleDeleteTds = async () => {
-    if (!confirm("Are you sure you want to delete the existing TDS document?")) {
-      return;
-    }
-
+  const handleConfirmDeleteTds = async () => {
     setDeleting(true);
     setError(null);
     setSuccessMsg(null);
 
     try {
       await deleteProductTdsApi(product.id);
+      setShowConfirmDelete(false);
       setSuccessMsg("TDS document deleted successfully!");
       if (onSuccess) onSuccess();
       setTimeout(() => {
@@ -174,6 +174,7 @@ const ProductTDS: React.FC<ProductTDSProps> = ({
     } catch (err: any) {
       console.error("Failed to delete TDS document:", err);
       setError(err?.message || "Failed to delete TDS document.");
+      setShowConfirmDelete(false);
     } finally {
       setDeleting(false);
     }
@@ -270,7 +271,7 @@ const ProductTDS: React.FC<ProductTDSProps> = ({
                   )}
                   <button
                     type="button"
-                    onClick={handleDeleteTds}
+                    onClick={() => setShowConfirmDelete(true)}
                     disabled={deleting}
                     className="p-1.5 text-[#B91C1C] hover:bg-[#FEF2F2] rounded-lg transition-colors cursor-pointer"
                     title="Delete Current TDS"
@@ -402,6 +403,18 @@ const ProductTDS: React.FC<ProductTDSProps> = ({
             </button>
           </div>
         </form>
+
+        {/* TDS Delete Confirmation Modal */}
+        <DeleteModal
+          isOpen={showConfirmDelete}
+          onClose={() => setShowConfirmDelete(false)}
+          onConfirm={handleConfirmDeleteTds}
+          isDeleting={deleting}
+          title="Delete TDS Document?"
+          itemName={existingFileName}
+          itemType="TDS document"
+          description="Are you sure you want to delete this technical data sheet? This document will be permanently removed."
+        />
       </div>
     </div>
   );

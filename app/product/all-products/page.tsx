@@ -12,12 +12,9 @@ import {
   getProductCategoriesApi,
   getProductSubcategoriesApi,
   getProductsApi,
-  getProductByIdApi,
   createProductApi,
   updateProductApi,
   deleteProductApi,
-  uploadProductTdsApi,
-  deleteProductTdsApi,
 } from "../../utils/product";
 import {
   Package,
@@ -37,9 +34,6 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
-  Check,
-  Sliders,
-  Sparkles,
   Loader2,
   FileUp,
   Eye,
@@ -100,8 +94,6 @@ const CATEGORY_MAP: Record<string, { main: string; subs: string[] }> = {
   },
 };
 
-// Initial Mock Product Data
-const initialProducts: ProductItem[] = [];
 
 export default function AllProductsPage() {
   const [products, setProducts] = useState<ProductItem[]>([]);
