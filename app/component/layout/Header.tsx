@@ -12,10 +12,20 @@ import {
   Menu,
   Inbox,
   X,
+  Loader2,
+  Trash2,
+  Check,
 } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 import { getMeApi, logoutApi, getStoredUser } from "@/app/utils/auth";
+import {
+  getNotificationsApi,
+  getUnreadNotificationsCountApi,
+  markNotificationAsReadApi,
+  markAllNotificationsAsReadApi,
+  deleteNotificationApi,
+} from "@/app/utils/notifications";
 
 interface HeaderProps {
   onToggleMobileSidebar?: () => void;
@@ -25,32 +35,31 @@ interface HeaderProps {
 }
 
 interface NotificationItem {
-  id: string;
+  id: string | number;
   title: string;
   time: string;
   unread: boolean;
+  readAt?: string | null;
 }
 
-const mockNotifications: NotificationItem[] = [
-  {
-    id: "1",
-    title: "New product enquiry received from ABC Pharma",
-    time: "10 mins ago",
-    unread: true,
-  },
-  {
-    id: "2",
-    title: "Main category 'Specialty Solvents' updated",
-    time: "1 hour ago",
-    unread: true,
-  },
-  {
-    id: "3",
-    title: "Blog draft 'Chemical Safety Guidelines' published",
-    time: "3 hours ago",
-    unread: false,
-  },
-];
+const formatTimeAgo = (dateStr?: string) => {
+  if (!dateStr) return "Just now";
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return "Just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  } catch {
+    return dateStr;
+  }
+};
 
 const Header: React.FC<HeaderProps> = ({
   onToggleMobileSidebar,
@@ -63,6 +72,11 @@ const Header: React.FC<HeaderProps> = ({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+
+  // Notification states
+  const [notificationsList, setNotificationsList] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [loadingNotifications, setLoadingNotifications] = useState<boolean>(false);
 
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -79,10 +93,79 @@ const Header: React.FC<HeaderProps> = ({
         const u = res.user || res.data?.user || res;
         if (u) setCurrentUser(u);
       })
-      .catch((err) => {
-        // Silent error fallback
+      .catch(() => {
+        // Silent fallback
       });
   }, []);
+
+  // Fetch Notifications & Unread Count from Real API
+  const fetchNotificationsData = async () => {
+    setLoadingNotifications(true);
+    try {
+      const [listRes, countRes] = await Promise.all([
+        getNotificationsApi().catch(() => null),
+        getUnreadNotificationsCountApi().catch(() => null),
+      ]);
+
+      if (listRes) {
+        const raw = listRes.data || listRes;
+        if (Array.isArray(raw)) {
+          const mapped: NotificationItem[] = raw.map((item: any) => {
+            const isUnread =
+              item.read_at === null ||
+              item.read_at === undefined ||
+              item.status === "unread" ||
+              item.unread === true;
+
+            const title =
+              item.title ||
+              item.data?.title ||
+              item.message ||
+              item.data?.message ||
+              "New System Notification";
+
+            return {
+              id: item.id,
+              title,
+              time: formatTimeAgo(item.created_at || item.updated_at),
+              unread: Boolean(isUnread),
+              readAt: item.read_at || null,
+            };
+          });
+          setNotificationsList(mapped);
+        }
+      }
+
+      if (countRes) {
+        const count =
+          typeof countRes.unread_count === "number"
+            ? countRes.unread_count
+            : typeof countRes.count === "number"
+            ? countRes.count
+            : typeof countRes.data?.unread_count === "number"
+            ? countRes.data.unread_count
+            : typeof countRes === "number"
+            ? countRes
+            : 0;
+        setUnreadCount(count);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotificationsData();
+  }, []);
+
+  // Fetch when opening notification dropdown
+  useEffect(() => {
+    if (isNotificationsOpen) {
+      fetchNotificationsData();
+    }
+  }, [isNotificationsOpen]);
 
   const handleLogout = async () => {
     setIsProfileOpen(false);
@@ -90,14 +173,57 @@ const Header: React.FC<HeaderProps> = ({
     router.push("/login");
   };
 
+  // Mark single notification read
+  const handleMarkAsRead = async (id: string | number) => {
+    try {
+      await markNotificationAsReadApi(id);
+      setNotificationsList((prev) =>
+        prev.map((n) => (String(n.id) === String(id) ? { ...n, unread: false } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to mark notification read:", err);
+    }
+  };
+
+  // Mark all notifications read
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsReadApi();
+      setNotificationsList((prev) => prev.map((n) => ({ ...n, unread: false })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Failed to mark all notifications read:", err);
+    }
+  };
+
+  // Delete notification
+  const handleDeleteNotification = async (
+    e: React.MouseEvent,
+    id: string | number
+  ) => {
+    e.stopPropagation();
+    try {
+      await deleteNotificationApi(id);
+      const targetNotif = notificationsList.find((n) => String(n.id) === String(id));
+      setNotificationsList((prev) => prev.filter((n) => String(n.id) !== String(id)));
+      if (targetNotif?.unread) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+    } catch (err) {
+      console.error("Failed to delete notification:", err);
+    }
+  };
+
   const displayName = currentUser?.name || currentUser?.email || defaultName;
   const displayRole = currentUser?.role || defaultRole;
-  const displayInitials = displayName
-    .split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase() || defaultInitials;
+  const displayInitials =
+    displayName
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase() || defaultInitials;
 
   // Close dropdowns on click outside
   useEffect(() => {
@@ -203,52 +329,119 @@ const Header: React.FC<HeaderProps> = ({
           >
             <Bell className="w-[19px] h-[19px]" />
             {/* Notification Badge */}
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#087F5B] rounded-full ring-2 ring-white" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-[#980e27] text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Notifications Dropdown */}
           {isNotificationsOpen && (
-            <div className="absolute right-0 mt-2 w-[320px] sm:w-[350px] bg-white rounded-lg shadow-lg border border-[#E5E7EB] py-3 z-50 animate-in fade-in zoom-in-95 duration-100">
-              <div className="px-4 pb-2.5 mb-2 border-b border-[#E5E7EB] flex items-center justify-between">
-                <h3 className="text-[13px] font-semibold text-[#172126]">
-                  Notifications
-                </h3>
-                <span className="text-[11px] font-semibold text-[#087F5B] bg-[#E6F4EA] px-2 py-0.5 rounded-full border border-[#087F5B]/20">
-                  2 New
-                </span>
-              </div>
+            <div className="absolute right-0 mt-2 w-[320px] sm:w-[360px] bg-white rounded-xl shadow-2xl border border-[#E5E7EB] py-3 z-50 animate-in fade-in zoom-in-95 duration-100">
+              {/* Header */}
+              <div className="px-4 pb-2.5 mb-1 border-b border-[#E5E7EB] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-[13px] font-bold text-[#172126]">
+                    Notifications
+                  </h3>
+                  {unreadCount > 0 && (
+                    <span className="text-[11px] font-semibold text-[#980e27] bg-[#FFF5F7] px-2 py-0.5 rounded-full border border-[#980e27]/20">
+                      {unreadCount} Unread
+                    </span>
+                  )}
+                </div>
 
-              <div className="max-h-[280px] overflow-y-auto divide-y divide-[#F3F5F6]">
-                {mockNotifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={`px-4 py-3 hover:bg-[#F8FAFA] transition-colors cursor-pointer flex items-start gap-3 ${
-                      notif.unread ? "bg-[#E6F4EA]/30" : ""
-                    }`}
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllAsRead}
+                    className="text-[11px] font-semibold text-[#087F5B] hover:underline transition-colors"
                   >
-                    <div className="p-1.5 rounded-full bg-[#E6F4EA] text-[#087F5B] shrink-0 mt-0.5 border border-[#087F5B]/20">
-                      <Inbox className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[13px] text-[#172126] font-normal leading-snug">
-                        {notif.title}
-                      </p>
-                      <span className="text-[11px] text-[#718096] mt-1 block">
-                        {notif.time}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                    Mark all read
+                  </button>
+                )}
               </div>
 
-              <div className="pt-2 px-4 border-t border-[#E5E7EB] text-center">
-                <button
-                  type="button"
-                  className="text-[12px] font-medium text-[#087F5B] hover:text-[#062F2B] transition-colors cursor-pointer"
-                >
-                  Mark all as read
-                </button>
+              {/* Notification List Container */}
+              <div className="max-h-[320px] overflow-y-auto divide-y divide-[#F3F5F6]">
+                {loadingNotifications ? (
+                  <div className="py-8 flex flex-col items-center justify-center gap-2 text-xs text-[#718096]">
+                    <Loader2 className="w-5 h-5 animate-spin text-[#087F5B]" />
+                    <span>Loading notifications...</span>
+                  </div>
+                ) : notificationsList.length > 0 ? (
+                  notificationsList.map((notif) => (
+                    <div
+                      key={notif.id}
+                      onClick={() => {
+                        if (notif.unread) handleMarkAsRead(notif.id);
+                      }}
+                      className={`group px-4 py-3 hover:bg-[#F8FAFA] transition-colors cursor-pointer flex items-start gap-3 ${
+                        notif.unread ? "bg-[#FFF5F7]/40" : ""
+                      }`}
+                    >
+                      <div
+                        className={`p-1.5 rounded-full shrink-0 mt-0.5 border ${
+                          notif.unread
+                            ? "bg-[#FFF5F7] text-[#980e27] border-[#980e27]/20"
+                            : "bg-[#F5F7F6] text-[#718096] border-[#E5E7EB]"
+                        }`}
+                      >
+                        <Inbox className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-[12px] leading-snug break-words ${
+                            notif.unread
+                              ? "font-semibold text-[#172126]"
+                              : "font-normal text-[#475569]"
+                          }`}
+                        >
+                          {notif.title}
+                        </p>
+                        <span className="text-[10px] text-[#718096] mt-1 block font-mono">
+                          {notif.time}
+                        </span>
+                      </div>
+
+                      {/* Item Delete Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteNotification(e, notif.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-[#718096] hover:text-[#DC2626] rounded-md transition-all cursor-pointer"
+                        title="Delete Notification"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center space-y-1">
+                    <Inbox className="w-7 h-7 text-[#A0AEC0] mx-auto" />
+                    <p className="text-xs font-semibold text-[#172126]">
+                      No Notifications
+                    </p>
+                    <p className="text-[11px] text-[#718096]">
+                      You&apos;re all caught up!
+                    </p>
+                  </div>
+                )}
               </div>
+
+              {/* Footer */}
+              {notificationsList.length > 0 && (
+                <div className="pt-2 px-4 border-t border-[#E5E7EB] flex items-center justify-between text-[11px] text-[#718096]">
+                  <span>Total: {notificationsList.length}</span>
+                  <button
+                    type="button"
+                    onClick={handleMarkAllAsRead}
+                    className="font-medium text-[#087F5B] hover:underline cursor-pointer"
+                  >
+                    Mark all as read
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
