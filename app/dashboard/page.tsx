@@ -66,12 +66,12 @@ export default function DashboardPage() {
         {/* ========================================================================= */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
           {/* Card 1: Total Products */}
-          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#087F5B]/30 transition-all">
+          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#E5E7EB] transition-all">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
                 Products
               </span>
-              <div className="p-2 rounded-md bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/10">
+              <div className="p-2 rounded-md bg-[#F8FAFC] text-[#64748B] border border-[#E5E7EB]">
                 <Package className="w-4 h-4" />
               </div>
             </div>
@@ -86,12 +86,12 @@ export default function DashboardPage() {
           </div>
 
           {/* Card 2: Main Categories */}
-          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#087F5B]/30 transition-all">
+          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#E5E7EB] transition-all">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
                 Main Categories
               </span>
-              <div className="p-2 rounded-md bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/10">
+              <div className="p-2 rounded-md bg-[#F8FAFC] text-[#64748B] border border-[#E5E7EB]">
                 <Layers className="w-4 h-4" />
               </div>
             </div>
@@ -106,12 +106,12 @@ export default function DashboardPage() {
           </div>
 
           {/* Card 3: Subcategories */}
-          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#087F5B]/30 transition-all">
+          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#E5E7EB] transition-all">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
                 Subcategories
               </span>
-              <div className="p-2 rounded-md bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/10">
+              <div className="p-2 rounded-md bg-[#F8FAFC] text-[#64748B] border border-[#E5E7EB]">
                 <FolderTree className="w-4 h-4" />
               </div>
             </div>
@@ -126,12 +126,12 @@ export default function DashboardPage() {
           </div>
 
           {/* Card 4: TDS Requests */}
-          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#087F5B]/30 transition-all">
+          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#E5E7EB] transition-all">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
                 TDS Requests
               </span>
-              <div className="p-2 rounded-md bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/10">
+              <div className="p-2 rounded-md bg-[#F8FAFC] text-[#64748B] border border-[#E5E7EB]">
                 <FileCheck className="w-4 h-4" />
               </div>
             </div>
@@ -146,12 +146,12 @@ export default function DashboardPage() {
           </div>
 
           {/* Card 5: Enquiries */}
-          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#087F5B]/30 transition-all">
+          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#E5E7EB] transition-all">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
                 Enquiries
               </span>
-              <div className="p-2 rounded-md bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/10">
+              <div className="p-2 rounded-md bg-[#F8FAFC] text-[#64748B] border border-[#E5E7EB]">
                 <Mail className="w-4 h-4" />
               </div>
             </div>
@@ -166,12 +166,12 @@ export default function DashboardPage() {
           </div>
 
           {/* Card 6: Blogs */}
-          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#087F5B]/30 transition-all">
+          <div className="bg-white p-4 rounded-lg border border-[#E5E7EB] shadow-2xs hover:border-[#E5E7EB] transition-all">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">
                 Blogs
               </span>
-              <div className="p-2 rounded-md bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/10">
+              <div className="p-2 rounded-md bg-[#F8FAFC] text-[#64748B] border border-[#E5E7EB]">
                 <FileText className="w-4 h-4" />
               </div>
             </div>

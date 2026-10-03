@@ -504,7 +504,7 @@ export default function AllProductsPage() {
           <button
             type="button"
             onClick={handleOpenCreateDrawer}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#087F5B] hover:bg-[#066C4D] active:bg-[#05573E] text-white text-xs font-semibold rounded-md transition-all cursor-pointer shadow-xs shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#980e27] hover:bg-[#7A0B1F] active:bg-[#600818] text-white text-xs font-semibold rounded-md transition-all cursor-pointer shadow-xs shrink-0"
           >
             <Plus className="w-4 h-4" />
             Add Product
@@ -516,60 +516,60 @@ export default function AllProductsPage() {
         {/* ========================================================================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Products */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/10">
-              <Package className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#172126] border border-[#E5E7EB]">
+              <Package className="w-5 h-5 text-[#64748B]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.total}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Total Products
               </span>
             </div>
           </div>
 
           {/* Published */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/10">
-              <CheckCircle2 className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#15803D] border border-[#E5E7EB]">
+              <CheckCircle2 className="w-5 h-5 text-[#15803D]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.published}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Published
               </span>
             </div>
           </div>
 
           {/* Drafts */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#FEF3C7] text-[#D97706] border border-[#D97706]/10">
-              <FileEdit className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#D97706] border border-[#E5E7EB]">
+              <FileEdit className="w-5 h-5 text-[#D97706]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.drafts}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Drafts
               </span>
             </div>
           </div>
 
           {/* Inactive */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]">
-              <AlertCircle className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#64748B] border border-[#E5E7EB]">
+              <AlertCircle className="w-5 h-5 text-[#64748B]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.inactive}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Inactive
               </span>
             </div>

@@ -170,20 +170,20 @@ const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {/* Sidebar Container (#062F2B Corporate Dark Green) */}
+      {/* Sidebar Container (Clean White with #E5E7EB border) */}
       <aside
-        className={`fixed top-0 left-0 z-50 flex flex-col w-[240px] h-screen bg-[#062F2B] text-white transition-transform duration-300 ease-in-out md:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 flex flex-col w-[240px] h-screen bg-white text-[#172126] border-r border-[#E5E7EB] transition-transform duration-300 ease-in-out md:translate-x-0 ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
         {/* Brand Header */}
-        <div className="h-[64px] min-h-[64px] px-5 flex items-center justify-between border-b border-[#0B403B]">
+        <div className="h-[64px] min-h-[64px] px-5 flex items-center justify-between border-b border-[#E5E7EB]">
           <Link
             href="/dashboard"
             onClick={onCloseMobile}
             className="flex items-center gap-3 group cursor-pointer"
           >
-            <div className="relative w-8 h-8 shrink-0 flex items-center justify-center bg-white rounded-md p-1">
+            <div className="relative w-8 h-8 shrink-0 flex items-center justify-center bg-[#F8FAFC] rounded-md p-1 border border-[#E5E7EB]">
               <Image
                 src="/Main_logo.png"
                 alt="Merchem India Logo"
@@ -194,10 +194,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               />
             </div>
             <div className="flex flex-col justify-center">
-              <span className="text-[14px] font-bold tracking-wider text-white uppercase leading-tight">
+              <span className="text-[14px] font-bold tracking-wider text-[#172126] uppercase leading-tight">
                 MERCHEM
               </span>
-              <span className="text-[9px] font-medium text-[#34D399] uppercase tracking-widest leading-none mt-0.5">
+              <span className="text-[9px] font-semibold text-[#980e27] uppercase tracking-widest leading-none mt-0.5">
                 INDIA PVT. LTD.
               </span>
             </div>
@@ -207,7 +207,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {onCloseMobile && (
             <button
               onClick={onCloseMobile}
-              className="p-1 rounded-md text-[#9CA3AF] hover:text-white hover:bg-[#087F5B]/20 md:hidden transition-colors cursor-pointer"
+              className="p-1 rounded-md text-[#64748B] hover:text-[#172126] hover:bg-[#F3F5F6] md:hidden transition-colors cursor-pointer"
               aria-label="Close Sidebar"
             >
               <X className="w-5 h-5" />
@@ -216,12 +216,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Navigation Section Area */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5 scrollbar-thin scrollbar-thumb-[#087F5B]/20">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5 scrollbar-thin scrollbar-thumb-[#980e27]/20">
           {navSections.map((section, idx) => (
             <div key={section.title || `section-${idx}`} className="space-y-1">
               {/* Section Header */}
               {section.title && (
-                <h3 className="px-3 pt-1 pb-1 text-[11px] font-semibold text-[#9CA3AF] tracking-wider uppercase select-none">
+                <h3 className="px-3 pt-1 pb-1 text-[11px] font-semibold text-[#64748B] tracking-wider uppercase select-none">
                   {section.title}
                 </h3>
               )}
@@ -237,15 +237,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                       key={item.id}
                       href={item.href}
                       onClick={() => handleLinkClick(item.id)}
-                      className={`w-full h-[38px] flex items-center gap-3 px-3 text-left text-[13px] font-medium transition-all duration-150 cursor-pointer ${
+                      className={`w-full h-[38px] flex items-center gap-3 px-3 text-left text-[13px] transition-all duration-150 cursor-pointer ${
                         active
-                          ? "bg-[#087F5B] text-white rounded-md font-semibold shadow-xs"
-                          : "text-[#D1D5DB] hover:bg-[#087F5B]/25 hover:text-white rounded-md"
+                          ? "bg-[#980e27] text-white rounded-md font-semibold shadow-xs"
+                          : "text-[#475569] hover:bg-[#FFF5F7] hover:text-[#980e27] rounded-md font-medium"
                       }`}
                     >
                       <Icon
                         className={`w-[17px] h-[17px] shrink-0 transition-colors ${
-                          active ? "text-white" : "text-[#9CA3AF]"
+                          active ? "text-white" : "text-[#64748B]"
                         }`}
                       />
                       <span className="truncate">{item.label}</span>

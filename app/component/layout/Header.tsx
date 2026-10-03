@@ -266,7 +266,7 @@ const Header: React.FC<HeaderProps> = ({
             aria-label="User Profile Menu"
           >
             {/* Avatar Circle */}
-            <div className="w-8 h-8 rounded-full bg-[#062F2B] text-white font-semibold text-[13px] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#980e27] text-white font-semibold text-[13px] flex items-center justify-center shrink-0 shadow-2xs">
               {displayInitials}
             </div>
 
@@ -301,7 +301,7 @@ const Header: React.FC<HeaderProps> = ({
               <div className="py-1">
                 <button
                   type="button"
-                  className="w-full px-3.5 py-1.5 text-left text-[13px] text-[#172126] hover:bg-[#E6F4EA] hover:text-[#087F5B] flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full px-3.5 py-1.5 text-left text-[13px] text-[#172126] hover:bg-[#FFF5F7] hover:text-[#980e27] flex items-center gap-2.5 transition-colors cursor-pointer"
                   onClick={() => setIsProfileOpen(false)}
                 >
                   <User className="w-3.5 h-3.5 text-[#718096]" />
@@ -309,7 +309,7 @@ const Header: React.FC<HeaderProps> = ({
                 </button>
                 <button
                   type="button"
-                  className="w-full px-3.5 py-1.5 text-left text-[13px] text-[#172126] hover:bg-[#E6F4EA] hover:text-[#087F5B] flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full px-3.5 py-1.5 text-left text-[13px] text-[#172126] hover:bg-[#FFF5F7] hover:text-[#980e27] flex items-center gap-2.5 transition-colors cursor-pointer"
                   onClick={() => setIsProfileOpen(false)}
                 >
                   <Settings className="w-3.5 h-3.5 text-[#718096]" />
@@ -317,7 +317,7 @@ const Header: React.FC<HeaderProps> = ({
                 </button>
                 <button
                   type="button"
-                  className="w-full px-3.5 py-1.5 text-left text-[13px] text-[#172126] hover:bg-[#E6F4EA] hover:text-[#087F5B] flex items-center gap-2.5 transition-colors cursor-pointer"
+                  className="w-full px-3.5 py-1.5 text-left text-[13px] text-[#172126] hover:bg-[#FFF5F7] hover:text-[#980e27] flex items-center gap-2.5 transition-colors cursor-pointer"
                   onClick={() => setIsProfileOpen(false)}
                 >
                   <KeyRound className="w-3.5 h-3.5 text-[#718096]" />

@@ -404,60 +404,60 @@ export default function EnquiriesPage() {
         {/* ========================================================================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Total Enquiries */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/10">
-              <Mail className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#172126] border border-[#E5E7EB]">
+              <Mail className="w-5 h-5 text-[#64748B]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.total}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Total Enquiries
               </span>
             </div>
           </div>
 
           {/* Card 2: New Enquiries */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#E0F2FE] text-[#0369A1] border border-[#0369A1]/10">
-              <MessageSquare className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#2563EB] border border-[#E5E7EB]">
+              <MessageSquare className="w-5 h-5 text-[#2563EB]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.newCount}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 New Submissions
               </span>
             </div>
           </div>
 
           {/* Card 3: In Progress */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#FEF3C7] text-[#D97706] border border-[#D97706]/10">
-              <Clock className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#D97706] border border-[#E5E7EB]">
+              <Clock className="w-5 h-5 text-[#D97706]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.inProgressCount}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 In Progress
               </span>
             </div>
           </div>
 
           {/* Card 4: Resolved */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/10">
-              <CheckCircle2 className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#15803D] border border-[#E5E7EB]">
+              <CheckCircle2 className="w-5 h-5 text-[#15803D]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.resolvedCount}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Resolved
               </span>
             </div>

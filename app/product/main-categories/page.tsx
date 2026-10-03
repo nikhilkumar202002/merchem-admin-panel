@@ -357,7 +357,7 @@ export default function MainCategoriesPage() {
           <button
             type="button"
             onClick={handleOpenCreateDrawer}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#087F5B] hover:bg-[#066C4D] active:bg-[#05573E] text-white text-xs font-semibold rounded-md transition-all cursor-pointer shadow-xs shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#980e27] hover:bg-[#7A0B1F] active:bg-[#600818] text-white text-xs font-semibold rounded-md transition-all cursor-pointer shadow-xs shrink-0"
           >
             <Plus className="w-4 h-4" />
             Add Category
@@ -369,60 +369,60 @@ export default function MainCategoriesPage() {
         {/* ========================================================================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Categories */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/10">
-              <Layers className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#172126] border border-[#E5E7EB]">
+              <Layers className="w-5 h-5 text-[#64748B]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.total}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Total Categories
               </span>
             </div>
           </div>
 
           {/* Active Categories */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#E6F4EA] text-[#087F5B] border border-[#087F5B]/10">
-              <CheckCircle2 className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#15803D] border border-[#E5E7EB]">
+              <CheckCircle2 className="w-5 h-5 text-[#15803D]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.active}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Active Categories
               </span>
             </div>
           </div>
 
           {/* Inactive Categories */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]">
-              <AlertCircle className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#64748B] border border-[#E5E7EB]">
+              <AlertCircle className="w-5 h-5 text-[#64748B]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.inactive}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Inactive Categories
               </span>
             </div>
           </div>
 
           {/* Total Subcategories */}
-          <div className="bg-white p-4.5 rounded-xl border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#FFF5F7] text-[#980e27] border border-[#980e27]/10">
-              <FolderTree className="w-5 h-5" />
+          <div className="bg-white p-4.5 rounded-lg border border-[#E5E7EB] shadow-2xs flex items-center gap-4">
+            <div className="p-3 rounded-md bg-[#F8FAFC] text-[#172126] border border-[#E5E7EB]">
+              <FolderTree className="w-5 h-5 text-[#64748B]" />
             </div>
             <div>
-              <span className="text-2xl font-extrabold text-[#172126] block leading-tight">
+              <span className="text-2xl font-bold text-[#172126] block leading-tight">
                 {stats.totalSubs}
               </span>
-              <span className="text-xs font-semibold text-[#718096] uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 Total Subcategories
               </span>
             </div>
