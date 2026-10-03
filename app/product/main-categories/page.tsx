@@ -333,7 +333,7 @@ export default function MainCategoriesPage() {
 
   return (
     <DashboardLayout activeNavId="main-categories">
-      <div className="space-y-6 max-w-7xl mx-auto pb-12 select-none">
+      <div className="space-y-6 w-full pb-12 select-none">
         {/* ========================================================================= */}
         {/* 1. PAGE HEADER                                                            */}
         {/* ========================================================================= */}

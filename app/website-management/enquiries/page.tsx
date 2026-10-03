@@ -357,7 +357,7 @@ export default function EnquiriesPage() {
 
   return (
     <DashboardLayout activeNavId="enquiries">
-      <div className="space-y-6 max-w-7xl mx-auto pb-16 select-none relative">
+      <div className="space-y-6 w-full pb-16 select-none relative">
         {/* Toast Notification */}
         {toastMessage && (
           <div className="fixed top-20 right-6 z-50 bg-[#172126] text-white px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-top-2">

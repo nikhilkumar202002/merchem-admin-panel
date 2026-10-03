@@ -89,7 +89,7 @@ export default function AddBlogPage() {
 
   return (
     <DashboardLayout activeNavId="add-blog">
-      <div className="space-y-6 max-w-7xl mx-auto pb-16 select-none">
+      <div className="space-y-6 w-full pb-16 select-none">
         {/* ========================================================================= */}
         {/* 1. PAGE HEADER                                                            */}
         {/* ========================================================================= */}
