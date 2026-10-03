@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
+import { toast } from "../../component/common/Toast";
 import {
   getProductCategoriesApi,
   getProductSubcategoriesApi,
@@ -384,8 +385,10 @@ export default function AllProductsPage() {
       let savedProductRes: any;
       if (editingProduct) {
         savedProductRes = await updateProductApi(editingProduct.id, payload);
+        toast.success(`Product "${formData.name}" updated successfully!`);
       } else {
         savedProductRes = await createProductApi(payload);
+        toast.success(`Product "${formData.name}" created successfully!`);
       }
 
       const createdId = savedProductRes?.data?.id || (editingProduct ? editingProduct.id : null);
@@ -396,13 +399,18 @@ export default function AllProductsPage() {
         tdsFormData.append("version", tdsVersionInput || "1.0");
         tdsFormData.append("tds_document", tdsPdfFile);
         await uploadProductTdsApi(createdId, tdsFormData);
+        toast.success("TDS Document uploaded successfully!");
       }
 
       await fetchProducts();
       setIsDrawerOpen(false);
     } catch (err: any) {
       console.error("Save product error:", err);
-      setIsDrawerOpen(false);
+      const errMsg =
+        err?.message ||
+        (err?.errors ? Object.values(err.errors).flat().join(" ") : null) ||
+        "Failed to save product.";
+      toast.error(errMsg);
     } finally {
       setIsSaving(false);
     }
@@ -420,8 +428,10 @@ export default function AllProductsPage() {
       if (!isMockId) {
         await deleteProductApi(targetId);
       }
+      toast.success("Product deleted successfully!");
     } catch (err) {
       console.error("Delete product error:", err);
+      toast.error("Failed to delete product");
     } finally {
       setProducts((prev) => prev.filter((p) => String(p.id) !== String(targetId)));
       setSelectedProductIds((prev) => prev.filter((id) => String(id) !== String(targetId)));
@@ -455,6 +465,7 @@ export default function AllProductsPage() {
     setSelectedProductIds([]);
     setIsBulkDeleteModalOpen(false);
     setIsDeleting(false);
+    toast.success("Selected products deleted!");
     if (hasRealIds) {
       fetchProducts();
     }
@@ -475,6 +486,7 @@ export default function AllProductsPage() {
         }
       }
     }
+    toast.success(`Bulk updated products to ${status}`);
     await fetchProducts();
     setSelectedProductIds([]);
   };

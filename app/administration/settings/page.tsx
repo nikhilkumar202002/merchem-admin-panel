@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
+import { toast } from "../../component/common/Toast";
 import {
   Sliders,
   Building,
@@ -135,7 +136,7 @@ export default function SettingsPage() {
     setTimeout(() => {
       setIsSaving(false);
       setHasUnsavedChanges(false);
-      showToast(`${sectionName} settings saved successfully!`);
+      toast.success(`${sectionName} settings saved successfully!`);
     }, 600);
   };
 
@@ -148,7 +149,7 @@ export default function SettingsPage() {
     setTimeout(() => {
       setIsSendingTestEmail(false);
       setIsTestEmailModalOpen(false);
-      showToast(`Test email sent successfully to ${testRecipientEmail}!`);
+      toast.success(`Test email sent successfully to ${testRecipientEmail}!`);
     }, 1200);
   };
 
@@ -156,15 +157,15 @@ export default function SettingsPage() {
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (!securitySettings.currentPassword || !securitySettings.newPassword) {
-      alert("Please enter both current and new passwords.");
+      toast.error("Please enter both current and new passwords.");
       return;
     }
     if (securitySettings.newPassword.length < 8) {
-      alert("New password must be at least 8 characters long.");
+      toast.error("New password must be at least 8 characters long.");
       return;
     }
     if (securitySettings.newPassword !== securitySettings.confirmPassword) {
-      alert("New passwords do not match.");
+      toast.error("New passwords do not match.");
       return;
     }
 
@@ -177,7 +178,7 @@ export default function SettingsPage() {
         newPassword: "",
         confirmPassword: "",
       }));
-      showToast("Password updated successfully!");
+      toast.success("Password updated successfully!");
     }, 800);
   };
 
