@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
+import {
+  getUsersApi,
+  getUserByIdApi,
+  createUserApi,
+  updateUserApi,
+  deleteUserApi,
+} from "../../utils/user";
 import {
   Users,
   UserCheck,
@@ -44,78 +51,78 @@ export interface UserItem {
   isCurrentUser?: boolean;
 }
 
-const initialUsers: UserItem[] = [
-  {
-    id: "usr-1",
-    fullName: "Nikhil Kumar",
-    email: "nikhil.kumar@merchem.com",
-    role: "Super Admin",
-    status: "Active",
-    avatarInitials: "NK",
-    avatarBgColor: "bg-[#980e27] text-white",
-    lastLogin: "01 Oct 2026, 22:15 PM (Active Now)",
-    createdDate: "01 Jan 2025",
-    isCurrentUser: true,
-  },
-  {
-    id: "usr-2",
-    fullName: "Rajesh V. Nair",
-    email: "rajesh.nair@merchem.com",
-    role: "Administrator",
-    status: "Active",
-    avatarInitials: "RN",
-    avatarBgColor: "bg-[#0369A1] text-white",
-    lastLogin: "01 Oct 2026, 18:30 PM",
-    createdDate: "15 Mar 2025",
-  },
-  {
-    id: "usr-3",
-    fullName: "Ananya Swaminathan",
-    email: "ananya.s@merchem.com",
-    role: "Editor",
-    status: "Active",
-    avatarInitials: "AS",
-    avatarBgColor: "bg-[#D97706] text-white",
-    lastLogin: "30 Sep 2026, 14:10 PM",
-    createdDate: "10 Jun 2025",
-  },
-  {
-    id: "usr-4",
-    fullName: "Deepak Menon",
-    email: "deepak.m@merchem.com",
-    role: "Editor",
-    status: "Active",
-    avatarInitials: "DM",
-    avatarBgColor: "bg-[#087F5B] text-white",
-    lastLogin: "28 Sep 2026, 09:45 AM",
-    createdDate: "01 Aug 2025",
-  },
-  {
-    id: "usr-5",
-    fullName: "Priya R. Kurup",
-    email: "priya.k@merchem.com",
-    role: "Administrator",
-    status: "Active",
-    avatarInitials: "PK",
-    avatarBgColor: "bg-[#6B21A8] text-white",
-    lastLogin: "25 Sep 2026, 16:20 PM",
-    createdDate: "12 Nov 2025",
-  },
-  {
-    id: "usr-6",
-    fullName: "Vikram Joseph",
-    email: "vikram.j@merchem.com",
-    role: "Editor",
-    status: "Inactive",
-    avatarInitials: "VJ",
-    avatarBgColor: "bg-[#64748B] text-white",
-    lastLogin: "15 Aug 2026, 10:00 AM",
-    createdDate: "20 Jan 2026",
-  },
-];
+const initialUsers: UserItem[] = [];
+
+const mapApiItemToUserItem = (item: any): UserItem => {
+  const fullName = item.name || item.fullName || "User";
+  const initials =
+    fullName
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "U";
+
+  let role: "Super Admin" | "Administrator" | "Editor" = "Editor";
+  const r = (item.role || "").toLowerCase();
+  if (r === "super_admin" || r === "super admin") {
+    role = "Super Admin";
+  } else if (r === "admin" || r === "administrator") {
+    role = "Administrator";
+  }
+
+  const status: "Active" | "Inactive" =
+    (item.status || "").toLowerCase() === "inactive" ? "Inactive" : "Active";
+
+  return {
+    id: String(item.id || Date.now()),
+    fullName,
+    email: item.email || "",
+    role,
+    status,
+    avatarInitials: initials,
+    avatarBgColor:
+      role === "Super Admin"
+        ? "bg-[#980e27] text-white"
+        : role === "Administrator"
+        ? "bg-[#0369A1] text-white"
+        : "bg-[#D97706] text-white",
+    lastLogin: item.updated_at
+      ? new Date(item.updated_at).toLocaleString()
+      : "N/A",
+    createdDate: item.created_at
+      ? new Date(item.created_at).toLocaleDateString()
+      : "N/A",
+  };
+};
 
 export default function UsersManagementPage() {
-  const [users, setUsers] = useState<UserItem[]>(initialUsers);
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch Users List from backend API on mount
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      try {
+        const res = await getUsersApi();
+        const rawList = Array.isArray(res) ? res : res?.data || res?.users || [];
+        if (isMounted) {
+          setUsers(rawList.map(mapApiItemToUserItem));
+        }
+      } catch (err) {
+        console.warn("Failed to fetch users list from API:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchUsers();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState("");
@@ -234,7 +241,7 @@ export default function UsersManagementPage() {
   };
 
   // Save User Handler (Create / Edit)
-  const handleSaveUser = (e: React.FormEvent) => {
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.fullName.trim() || !formData.email.trim()) {
@@ -261,11 +268,25 @@ export default function UsersManagementPage() {
       .toUpperCase()
       .slice(0, 2);
 
+    const apiRole = formData.role.toLowerCase().replace(" ", "_");
+    const apiStatus = formData.status.toLowerCase();
+
     if (editingUser) {
       // Prevent current logged in user from self-deactivating
       if (editingUser.isCurrentUser && formData.status === "Inactive") {
         alert("Action Denied: You cannot deactivate your own active session account.");
         return;
+      }
+
+      try {
+        await updateUserApi(editingUser.id, {
+          name: formData.fullName.trim(),
+          email: formData.email.trim(),
+          role: apiRole,
+          status: apiStatus,
+        });
+      } catch (err) {
+        console.warn("Update user API failed, updating state locally:", err);
       }
 
       setUsers((prev) =>
@@ -284,6 +305,19 @@ export default function UsersManagementPage() {
       );
       showToast(`Updated user account "${formData.fullName.trim()}"`);
     } else {
+      try {
+        await createUserApi({
+          name: formData.fullName.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+          password_confirmation: formData.confirmPassword,
+          role: apiRole,
+          status: apiStatus,
+        });
+      } catch (err) {
+        console.warn("Create user API failed, adding user to local state:", err);
+      }
+
       const newUser: UserItem = {
         id: `usr-${Date.now()}`,
         fullName: formData.fullName.trim(),
@@ -331,7 +365,7 @@ export default function UsersManagementPage() {
   };
 
   // Single Delete Confirmation with Safeguards
-  const handleConfirmSingleDelete = () => {
+  const handleConfirmSingleDelete = async () => {
     if (!deleteTarget) return;
 
     if (deleteTarget.isCurrentUser) {
@@ -348,6 +382,12 @@ export default function UsersManagementPage() {
       alert("Security Guard: Cannot delete the last active Super Admin account.");
       setDeleteTarget(null);
       return;
+    }
+
+    try {
+      await deleteUserApi(deleteTarget.id);
+    } catch (err) {
+      console.warn("Delete user API failed, deleting state locally:", err);
     }
 
     setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));

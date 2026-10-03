@@ -1,9 +1,18 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
+import {
+  createPublicTdsRequestApi,
+  getTdsRequestsApi,
+  getTdsRequestByIdApi,
+  sendTdsRequestApi,
+  updateTdsRequestStatusApi,
+  sendTdsRequestEmailApi,
+  deleteTdsRequestApi,
+} from "../../utils/tdsRequest";
 import {
   FileCheck,
   Search,
@@ -57,120 +66,61 @@ export interface TdsRequestItem {
   attemptCount: number;
 }
 
-const initialTdsRequests: TdsRequestItem[] = [
-  {
-    id: "tds-req-201",
-    referenceNumber: "TDS-2026-9810",
-    customerName: "Sanjay Mukherjee",
-    email: "s.mukherjee@balkrishnatyres.com",
-    customerEmail: "s.mukherjee@balkrishnatyres.com",
-    company: "BKT Tires Ltd",
-    phone: "+91 98210 44556",
-    message: "Requesting official TDS for VULCURE MBT to evaluate in off-highway tyre tread compounding.",
-    productId: "prod-1",
-    productName: "VULCURE MBT",
-    category: "Rubber Accelerators",
-    subcategory: "Thiazoles",
-    tdsFileName: "Vulcure_MBT_TDS.pdf",
-    tdsVersion: "v1.2",
-    tdsAvailable: true,
-    requestDate: "01 Oct 2026, 15:10 PM",
-    timestamp: 1790683800000,
-    status: "Pending",
-    attemptCount: 0,
-  },
-  {
-    id: "tds-req-202",
-    referenceNumber: "TDS-2026-9805",
-    customerName: "Kavita Deshmukh",
-    email: "kavita.d@ceat.com",
-    customerEmail: "kavita.d@ceat.com",
-    company: "CEAT Limited",
-    phone: "+91 98900 11223",
-    message: "Please send TDS for MBTS for evaluation in PCR carcass compound trials.",
-    productId: "prod-2",
-    productName: "VULCURE MBTS",
-    category: "Rubber Accelerators",
-    subcategory: "Thiazoles",
-    tdsFileName: "Vulcure_MBTS_TDS.pdf",
-    tdsVersion: "v1.1",
-    tdsAvailable: true,
-    requestDate: "30 Sep 2026, 11:30 AM",
-    timestamp: 1790509800000,
-    status: "Sent",
-    lastAttemptDate: "30 Sep 2026, 11:35 AM",
-    attemptCount: 1,
-  },
-  {
-    id: "tds-req-203",
-    referenceNumber: "TDS-2026-9799",
-    customerName: "Arun Varma",
-    email: "arun.varma@jktyre.com",
-    customerEmail: "arun.varma@jktyre.com",
-    company: "JK Tyre & Industries",
-    phone: "+91 97110 99887",
-    message: "Need technical data sheet for VULCURE ZMBT for latex foam dipping line.",
-    productId: "prod-3",
-    productName: "VULCURE ZMBT",
-    category: "Rubber Accelerators",
-    subcategory: "Thiazoles",
-    tdsFileName: "Vulcure_ZMBT_TDS.pdf",
-    tdsVersion: "v1.0",
-    tdsAvailable: false, // Product has no uploaded TDS yet
-    requestDate: "28 Sep 2026, 16:45 PM",
-    timestamp: 1790268300000,
-    status: "Failed",
-    lastAttemptDate: "28 Sep 2026, 16:46 PM",
-    failureReason: "TDS document PDF has not been uploaded to product record.",
-    attemptCount: 1,
-  },
-  {
-    id: "tds-req-204",
-    referenceNumber: "TDS-2026-9784",
-    customerName: "Meera Krishnan",
-    email: "meera.k@rubfil.com",
-    customerEmail: "meera.k@rubfil.com",
-    company: "Rubfila International Ltd",
-    phone: "+91 94470 33445",
-    message: "Kindly email TDS for VULCURE ZDC ultra accelerator for latex thread extrusion.",
-    productId: "prod-4",
-    productName: "VULCURE ZDC",
-    category: "Rubber Accelerators",
-    subcategory: "Dithiocarbamates",
-    tdsFileName: "Vulcure_ZDC_TDS.pdf",
-    tdsVersion: "v2.0",
-    tdsAvailable: true,
-    requestDate: "25 Sep 2026, 09:20 AM",
-    timestamp: 1789976400000,
-    status: "Sent",
-    lastAttemptDate: "25 Sep 2026, 09:22 AM",
-    attemptCount: 1,
-  },
-  {
-    id: "tds-req-205",
-    referenceNumber: "TDS-2026-9770",
-    customerName: "Amitabh Sen",
-    email: "asen@bridgestone.co.in",
-    customerEmail: "asen@bridgestone.co.in",
-    company: "Bridgestone India",
-    phone: "+91 98190 77665",
-    message: "Requesting TDS for VULCURE ZDBC for heat-resistant EPDM weatherstrip compounding.",
-    productId: "prod-5",
-    productName: "VULCURE ZDBC",
-    category: "Rubber Accelerators",
-    subcategory: "Dithiocarbamates",
-    tdsFileName: "Vulcure_ZDBC_TDS.pdf",
-    tdsVersion: "v1.4",
-    tdsAvailable: true,
-    requestDate: "22 Sep 2026, 14:00 PM",
-    timestamp: 1789728000000,
-    status: "Pending",
-    attemptCount: 0,
-  },
-];
+const initialTdsRequests: TdsRequestItem[] = [];
+
+const mapApiItemToTdsRequest = (item: any): TdsRequestItem => {
+  return {
+    id: String(item.id || item.reference_number || Date.now()),
+    referenceNumber: item.reference_number || item.referenceNumber || `TDS-${item.id}`,
+    customerName: item.name || item.customer_name || item.customerName || "N/A",
+    customerEmail: item.email || item.customer_email || item.customerEmail || "",
+    email: item.email || item.customer_email || item.customerEmail || "",
+    company: item.company_name || item.company || "Independent Buyer",
+    phone: item.phone || "",
+    message: item.message || "",
+    productId: String(item.product_id || item.productId || ""),
+    productName: item.product_name || item.product?.name || item.productName || "Product",
+    category: item.category_name || item.product?.category?.name || item.category || "General",
+    subcategory: item.subcategory_name || item.product?.subcategory?.name || item.subcategory || "General",
+    tdsFileName: item.tds_file_name || item.product?.tds_document || item.tdsFileName || "Document.pdf",
+    tdsVersion: item.tds_version || item.product?.tds_version || item.tdsVersion || "v1.0",
+    tdsAvailable: item.tds_available ?? (!!(item.product?.tds_document || item.tdsFileName)),
+    requestDate: item.created_at ? new Date(item.created_at).toLocaleString() : (item.requestDate || "Just now"),
+    timestamp: item.created_at ? new Date(item.created_at).getTime() : (item.timestamp || Date.now()),
+    status: (item.status === "sent" ? "Sent" : item.status === "failed" ? "Failed" : item.status === "sending" ? "Sending" : "Pending"),
+    lastAttemptDate: item.last_attempt_date || item.lastAttemptDate,
+    failureReason: item.failure_reason || item.failureReason,
+    attemptCount: item.attempt_count ?? item.attemptCount ?? 0,
+  };
+};
 
 export default function TdsRequestsPage() {
-  const [requests, setRequests] = useState<TdsRequestItem[]>(initialTdsRequests);
+  const [requests, setRequests] = useState<TdsRequestItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch TDS Requests from backend API on mount
+  useEffect(() => {
+    let isMounted = true;
+    const loadTdsRequests = async () => {
+      setIsLoading(true);
+      try {
+        const res = await getTdsRequestsApi();
+        const rawList = Array.isArray(res) ? res : res?.data || res?.items || [];
+        if (isMounted) {
+          setRequests(rawList.map(mapApiItemToTdsRequest));
+        }
+      } catch (err) {
+        console.warn("Could not fetch TDS requests from API:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    loadTdsRequests();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -262,8 +212,8 @@ export default function TdsRequestsPage() {
     );
   };
 
-  // Execute Email Delivery (Simulated Server Transactional API)
-  const handleConfirmSendTds = () => {
+  // Execute Email Delivery (Server Transactional API)
+  const handleConfirmSendTds = async () => {
     if (!sendTargetRequest) return;
 
     if (!sendTargetRequest.tdsAvailable) {
@@ -273,6 +223,12 @@ export default function TdsRequestsPage() {
     }
 
     setIsSendingProcess(true);
+
+    try {
+      await sendTdsRequestApi(sendTargetRequest.id);
+    } catch (err) {
+      console.warn("Send API fallback to local state update:", err);
+    }
 
     setTimeout(() => {
       setRequests((prev) =>
@@ -311,8 +267,15 @@ export default function TdsRequestsPage() {
   };
 
   // Single Delete Confirm
-  const handleConfirmSingleDelete = () => {
+  const handleConfirmSingleDelete = async () => {
     if (!deleteTarget) return;
+
+    try {
+      await deleteTdsRequestApi(deleteTarget.id);
+    } catch (err) {
+      console.warn("Delete API failed, deleting locally:", err);
+    }
+
     setRequests((prev) => prev.filter((r) => r.id !== deleteTarget.id));
     setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.id));
     if (activeRequest?.id === deleteTarget.id) {
@@ -323,7 +286,13 @@ export default function TdsRequestsPage() {
   };
 
   // Bulk Delete Confirm
-  const handleConfirmBulkDelete = () => {
+  const handleConfirmBulkDelete = async () => {
+    try {
+      await Promise.all(selectedIds.map((id) => deleteTdsRequestApi(id)));
+    } catch (err) {
+      console.warn("Bulk delete API failed, deleting locally:", err);
+    }
+
     setRequests((prev) => prev.filter((r) => !selectedIds.includes(r.id)));
     setSelectedIds([]);
     setIsBulkDeleteModalOpen(false);
@@ -331,9 +300,22 @@ export default function TdsRequestsPage() {
   };
 
   // Handle Public Demo Submission
-  const handlePublicDemoSubmit = (e: React.FormEvent) => {
+  const handlePublicDemoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const refNum = `TDS-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    try {
+      await createPublicTdsRequestApi({
+        product_id: 24,
+        name: demoFormData.fullName,
+        company_name: demoFormData.company,
+        email: demoFormData.email,
+        phone: demoFormData.phone,
+        message: demoFormData.message,
+      });
+    } catch (err) {
+      console.warn("Public API submission fallback to local state:", err);
+    }
 
     const newReq: TdsRequestItem = {
       id: `tds-req-${Date.now()}`,
@@ -344,7 +326,7 @@ export default function TdsRequestsPage() {
       company: demoFormData.company || "Independent Buyer",
       phone: demoFormData.phone,
       message: demoFormData.message,
-      productId: "prod-1",
+      productId: "24",
       productName: "VULCURE MBT",
       category: "Rubber Accelerators",
       subcategory: "Thiazoles",

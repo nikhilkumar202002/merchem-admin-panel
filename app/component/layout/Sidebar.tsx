@@ -93,12 +93,12 @@ const navSections: NavSection[] = [
   {
     title: "WEBSITE MANAGEMENT",
     items: [
-      {
-        id: "media-library",
-        label: "Media Library",
-        icon: ImageIcon,
-        href: "/website-management/media-library",
-      },
+      // {
+      //   id: "media-library",
+      //   label: "Media Library",
+      //   icon: ImageIcon,
+      //   href: "/website-management/media-library",
+      // },
       {
         id: "enquiries",
         label: "Enquiries",
