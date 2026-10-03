@@ -7,6 +7,7 @@ import BreadCrumbs from "../../component/common/BreadCrumbs";
 import { toast } from "../../component/common/Toast";
 import ProductView from "../components/ProductView";
 import ProductTDS from "../components/ProductTDS";
+import DeleteModal from "../components/DeleteModal";
 import {
   getProductCategoriesApi,
   getProductSubcategoriesApi,
@@ -148,7 +149,6 @@ export default function AllProductsPage() {
 
   // Delete Dialog State
   const [deleteModalId, setDeleteModalId] = useState<string | number | null>(null);
-  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
   // Form Fields State (Matching exact backend fields)
   const [formData, setFormData] = useState({
@@ -206,8 +206,24 @@ export default function AllProductsPage() {
   const fetchProducts = async (page = currentPage, limit = perPage) => {
     setIsLoading(true);
     try {
+      const params: any = { page, per_page: limit };
+      if (selectedMainCategory !== "All") {
+        const catObj = mainCategoriesList.find((c) => c.name === selectedMainCategory);
+        if (catObj) params.category_id = catObj.id;
+      }
+      if (selectedSubcategory !== "All") {
+        const subObj = subcategoriesList.find((s) => s.name === selectedSubcategory);
+        if (subObj) params.subcategory_id = subObj.id;
+      }
+      if (selectedStatus !== "All") {
+        params.status = selectedStatus;
+      }
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+
       const [res, activeRes, inactiveRes] = await Promise.all([
-        getProductsApi({ page, per_page: limit }),
+        getProductsApi(params),
         getProductsApi({ status: "active", per_page: 1 }).catch(() => null),
         getProductsApi({ status: "inactive", per_page: 1 }).catch(() => null),
       ]);
@@ -295,8 +311,11 @@ export default function AllProductsPage() {
   useEffect(() => {
     fetchMainCategoriesList();
     fetchSubcategoriesList();
-    fetchProducts(1, perPage);
   }, []);
+
+  useEffect(() => {
+    fetchProducts(1, perPage);
+  }, [selectedMainCategory, selectedSubcategory, selectedStatus, perPage]);
 
   // Calculate Subcategory list based on selected Main Category in Filter bar
   const filterSubcategoryOptions = useMemo(() => {
@@ -311,24 +330,39 @@ export default function AllProductsPage() {
     return Array.from(new Set(list));
   }, [selectedMainCategory, subcategoriesList]);
 
-  // Main Categories list for Toolbar filter
+  // Main Categories list for Toolbar filter (fetched from /v1/product-categories + fallbacks)
   const filterMainCategoryOptions = useMemo(() => {
     const set = new Set<string>();
+    mainCategoriesList.forEach((c) => {
+      if (c.name) set.add(c.name);
+    });
     subcategoriesList.forEach((s) => {
-      if (s.mainCategoryName) set.add(s.mainCategoryName);
+      if (s.mainCategoryName && s.mainCategoryName !== "Main Category") {
+        set.add(s.mainCategoryName);
+      }
+    });
+    products.forEach((p) => {
+      if (p.mainCategory && p.mainCategory !== "—") {
+        set.add(p.mainCategory);
+      }
     });
     return Array.from(set);
-  }, [subcategoriesList]);
+  }, [mainCategoriesList, subcategoriesList, products]);
 
   // Derived filtered products list
   const filteredProducts = useMemo(() => {
+    const activeMainCatObj = mainCategoriesList.find((c) => c.name === selectedMainCategory);
+
     return products.filter((item) => {
       const matchesSearch =
+        !searchQuery.trim() ||
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.slug.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesMainCat =
-        selectedMainCategory === "All" || item.mainCategory === selectedMainCategory;
+        selectedMainCategory === "All" ||
+        item.mainCategory === selectedMainCategory ||
+        (activeMainCatObj && String(item.mainCategoryId) === String(activeMainCatObj.id));
 
       const matchesSubCat =
         selectedSubcategory === "All" || item.subcategory === selectedSubcategory;
@@ -338,7 +372,7 @@ export default function AllProductsPage() {
 
       return matchesSearch && matchesMainCat && matchesSubCat && matchesStatus;
     });
-  }, [products, searchQuery, selectedMainCategory, selectedSubcategory, selectedStatus]);
+  }, [products, searchQuery, selectedMainCategory, selectedSubcategory, selectedStatus, mainCategoriesList]);
 
   // Statistics Summary Counts
   const stats = useMemo(() => {
@@ -547,34 +581,6 @@ export default function AllProductsPage() {
       if (!isMockId) {
         fetchProducts();
       }
-    }
-  };
-
-  // Bulk Delete Confirm
-  const handleBulkDeleteConfirm = async () => {
-    if (selectedProductIds.length === 0) return;
-    setIsDeleting(true);
-    const idsToDelete = [...selectedProductIds];
-    let hasRealIds = false;
-
-    for (const id of idsToDelete) {
-      const isMockId = typeof id === "string" && id.startsWith("prod-");
-      if (!isMockId) {
-        hasRealIds = true;
-        try {
-          await deleteProductApi(id);
-        } catch (err) {
-          console.error(`Bulk delete error for id ${id}:`, err);
-        }
-      }
-    }
-    setProducts((prev) => prev.filter((p) => !idsToDelete.map(String).includes(String(p.id))));
-    setSelectedProductIds([]);
-    setIsBulkDeleteModalOpen(false);
-    setIsDeleting(false);
-    toast.success("Selected products deleted!");
-    if (hasRealIds) {
-      fetchProducts();
     }
   };
 
@@ -808,13 +814,6 @@ export default function AllProductsPage() {
                   className="px-2.5 py-1 bg-white hover:bg-[#FEF3C7] text-[#D97706] border border-[#D97706]/30 text-xs font-semibold rounded-md transition-colors cursor-pointer"
                 >
                   Draft Selected
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsBulkDeleteModalOpen(true)}
-                  className="px-2.5 py-1 bg-[#980e27] hover:bg-[#7A0B1F] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-xs"
-                >
-                  Delete Selected
                 </button>
               </div>
             </div>
@@ -1420,85 +1419,16 @@ export default function AllProductsPage() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 6. CONFIRM DELETE MODALS                                                  */}
-      {/* ========================================================================= */}
-      {deleteModalId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-[#E5E7EB] shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-full bg-[#FFF5F5] text-[#E53E3E] flex items-center justify-center border border-[#FEB2B2]">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-[#172126]">Delete Product?</h3>
-              <p className="text-xs text-[#718096] mt-1">
-                Are you sure you want to delete this chemical product? This action cannot be undone.
-              </p>
-            </div>
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => setDeleteModalId(null)}
-                className="px-4 py-2 border border-[#E5E7EB] text-xs font-semibold text-[#475569] rounded-lg hover:bg-[#F8FAFA] disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={handleDeleteConfirm}
-                className="px-4 py-2 bg-[#E53E3E] hover:bg-[#C53030] text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-              >
-                {isDeleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Single Product Delete Modal */}
+      <DeleteModal
+        isOpen={Boolean(deleteModalId)}
+        onClose={() => setDeleteModalId(null)}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+        itemType="chemical product"
+        itemName={products.find((p) => String(p.id) === String(deleteModalId))?.name}
+      />
 
-      {/* Bulk Delete Modal */}
-      {isBulkDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-[#E5E7EB] shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-full bg-[#FFF5F5] text-[#E53E3E] flex items-center justify-center border border-[#FEB2B2]">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-[#172126]">
-                Delete {selectedProductIds.length} Selected Products?
-              </h3>
-              <p className="text-xs text-[#718096] mt-1">
-                Are you sure you want to remove all selected chemical product records?
-              </p>
-            </div>
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => setIsBulkDeleteModalOpen(false)}
-                className="px-4 py-2 border border-[#E5E7EB] text-xs font-semibold text-[#475569] rounded-lg hover:bg-[#F8FAFA] disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={handleBulkDeleteConfirm}
-                className="px-4 py-2 bg-[#E53E3E] hover:bg-[#C53030] text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-              >
-                {isDeleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Confirm Bulk Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 5. SINGLE PRODUCT VIEW MODAL                                              */}
-      {/* ========================================================================= */}
       <ProductView
         productId={viewingProduct?.id}
         productData={viewingProduct}
@@ -1514,9 +1444,6 @@ export default function AllProductsPage() {
         }}
       />
 
-      {/* ========================================================================= */}
-      {/* 6. TDS UPLOAD & MANAGEMENT MODAL                                         */}
-      {/* ========================================================================= */}
       <ProductTDS
         product={tdsModalProduct}
         isOpen={isTdsModalOpen}

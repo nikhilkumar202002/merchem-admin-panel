@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
 import { toast } from "../../component/common/Toast";
+import DeleteModal from "../components/DeleteModal";
 import {
   getProductCategoriesApi,
   getProductSubcategoriesApi,
@@ -951,76 +952,39 @@ function SubcategoriesContent() {
       {/* ========================================================================= */}
       {/* 6. UNSAFE DELETE PREVENTION MODAL                                         */}
       {/* ========================================================================= */}
-      {showBlockedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-[#E5E7EB] shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-full bg-[#FEF3C7] text-[#D97706] flex items-center justify-center border border-[#FDE68A]">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-[#172126]">
-                Cannot Delete Subcategory
-              </h3>
-              <p className="text-xs text-[#718096] mt-1.5 leading-relaxed">
-                The subcategory <strong className="text-[#172126]">&quot;{showBlockedModal.name}&quot;</strong> has{" "}
-                <strong className="text-[#980e27]">{showBlockedModal.productCount} assigned products</strong>. Please reassign or delete assigned products before deleting this subcategory.
-              </p>
-            </div>
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <Link
-                href={`/product/all-products?subcategory=${encodeURIComponent(
+      {/* Blocked Delete Prevention Modal */}
+      <DeleteModal
+        isOpen={Boolean(showBlockedModal)}
+        onClose={() => setShowBlockedModal(null)}
+        blocked={true}
+        itemType="subcategory"
+        itemName={showBlockedModal?.name}
+        blockedMessage={
+          <>
+            The subcategory <strong className="text-[#172126]">&quot;{showBlockedModal?.name}&quot;</strong> has{" "}
+            <strong className="text-[#980e27]">{showBlockedModal?.productCount} assigned products</strong>. Please reassign or delete assigned products before deleting this subcategory.
+          </>
+        }
+        actionLink={
+          showBlockedModal
+            ? {
+                href: `/product/all-products?subcategory=${encodeURIComponent(
                   showBlockedModal.name
-                )}`}
-                className="px-4 py-2 bg-[#980e27] text-white text-xs font-semibold rounded-lg shadow-xs hover:bg-[#7A0B1F]"
-              >
-                Manage Assigned Products
-              </Link>
-              <button
-                type="button"
-                onClick={() => setShowBlockedModal(null)}
-                className="px-4 py-2 border border-[#E5E7EB] text-xs font-semibold text-[#475569] rounded-lg hover:bg-[#F8FAFA]"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                )}`,
+                label: "Manage Assigned Products",
+              }
+            : undefined
+        }
+      />
 
       {/* Safe Delete Confirmation Modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-[#E5E7EB] shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-full bg-[#FFF5F5] text-[#E53E3E] flex items-center justify-center border border-[#FEB2B2]">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-[#172126]">
-                Delete Subcategory?
-              </h3>
-              <p className="text-xs text-[#718096] mt-1">
-                Are you sure you want to delete <strong className="text-[#172126]">&quot;{deleteTarget.name}&quot;</strong>? This action cannot be undone.
-              </p>
-            </div>
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 border border-[#E5E7EB] text-xs font-semibold text-[#475569] rounded-lg hover:bg-[#F8FAFA]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                className="px-4 py-2 bg-[#E53E3E] hover:bg-[#C53030] text-white text-xs font-semibold rounded-lg shadow-xs"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteModal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        itemType="subcategory"
+        itemName={deleteTarget?.name}
+      />
     </DashboardLayout>
   );
 }
