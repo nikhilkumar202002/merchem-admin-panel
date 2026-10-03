@@ -186,7 +186,13 @@ export default function AllProductsPage() {
             ? new Date(item.updated_at).toLocaleDateString()
             : "—",
           displayOrder: item.sort_order || idx + 1,
-          image: item.image || null,
+          image: item.image_url
+            ? item.image_url
+            : item.image
+            ? item.image.startsWith("http")
+              ? item.image
+              : `http://127.0.0.1:8000/storage/${item.image}`
+            : null,
           tdsFile: item.tds_document || item.tds_document_name || null,
           tdsVersion: item.tds_document_version || null,
           tdsAvailable: item.tds?.available || false,

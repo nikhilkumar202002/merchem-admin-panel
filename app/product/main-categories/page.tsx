@@ -103,7 +103,13 @@ export default function MainCategoriesPage() {
           createdAt: item.created_at
             ? new Date(item.created_at).toLocaleDateString()
             : "—",
-          image: item.image || null,
+          image: item.image_url
+            ? item.image_url
+            : item.image
+            ? item.image.startsWith("http")
+              ? item.image
+              : `http://127.0.0.1:8000/storage/${item.image}`
+            : null,
         }));
         setCategories(mapped);
       }
