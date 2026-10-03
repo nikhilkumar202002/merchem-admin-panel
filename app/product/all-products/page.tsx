@@ -34,7 +34,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
-  Globe,
   Sliders,
   Sparkles,
   Loader2,
@@ -96,6 +95,20 @@ export default function AllProductsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Published and Inactive total counts state
+  const [publishedCount, setPublishedCount] = useState<number | null>(null);
+  const [inactiveCount, setInactiveCount] = useState<number | null>(null);
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [paginationInfo, setPaginationInfo] = useState({
+    total: 0,
+    perPage: 10,
+    currentPage: 1,
+    lastPage: 1,
+  });
+
   // Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMainCategory, setSelectedMainCategory] = useState("All");
@@ -113,13 +126,14 @@ export default function AllProductsPage() {
   const [deleteModalId, setDeleteModalId] = useState<string | number | null>(null);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
-  // Form Fields State (Matching exact 11 backend fields)
+  // Form Fields State (Matching exact backend fields)
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
+    mainCategoryId: "" as string | number,
+    mainCategory: "",
     subcategoryId: "" as string | number,
     subcategory: "",
-    mainCategory: "",
     shortDescription: "",
     fullDescription: "",
     applications: "",
@@ -164,20 +178,31 @@ export default function AllProductsPage() {
     }
   };
 
-  // Fetch Products from API GET /v1/products
-  const fetchProducts = async () => {
+  // Fetch Products from API GET /v1/products with pagination and status counts
+  const fetchProducts = async (page = currentPage, limit = perPage) => {
     setIsLoading(true);
     try {
-      const res = await getProductsApi();
+      const [res, activeRes, inactiveRes] = await Promise.all([
+        getProductsApi({ page, per_page: limit }),
+        getProductsApi({ status: "active", per_page: 1 }).catch(() => null),
+        getProductsApi({ status: "inactive", per_page: 1 }).catch(() => null),
+      ]);
+
       const rawData = res.data || res;
       if (Array.isArray(rawData)) {
         const mapped: ProductItem[] = rawData.map((item: any, idx: number) => ({
           id: item.id,
           name: item.name,
           slug: item.slug,
-          subcategoryId: item.product_subcategory_id || (item.subcategory ? item.subcategory.id : ""),
-          subcategory: item.subcategory ? item.subcategory.name : "Subcategory",
-          mainCategory: item.subcategory?.category ? item.subcategory.category.name : "Main Category",
+          mainCategoryId:
+            item.product_category_id ||
+            item.category_id ||
+            (item.category ? item.category.id : item.subcategory?.category ? item.subcategory.category.id : ""),
+          mainCategory:
+            item.category ? item.category.name : item.subcategory?.category ? item.subcategory.category.name : "—",
+          subcategoryId:
+            item.product_subcategory_id || item.subcategory_id || (item.subcategory ? item.subcategory.id : ""),
+          subcategory: item.subcategory ? item.subcategory.name : "—",
           shortDescription: item.short_description || "",
           fullDescription: item.description || item.short_description || "",
           applications: item.applications
@@ -202,6 +227,35 @@ export default function AllProductsPage() {
         }));
         setProducts(mapped);
       }
+
+      if (res.pagination) {
+        setPaginationInfo({
+          total: Number(res.pagination.total || 0),
+          perPage: Number(res.pagination.per_page || limit),
+          currentPage: Number(res.pagination.current_page || page),
+          lastPage: Number(res.pagination.last_page || 1),
+        });
+      } else {
+        const totalItems = Array.isArray(rawData) ? rawData.length : 0;
+        setPaginationInfo({
+          total: totalItems,
+          perPage: limit,
+          currentPage: page,
+          lastPage: Math.ceil(totalItems / limit) || 1,
+        });
+      }
+
+      if (activeRes?.pagination?.total !== undefined) {
+        setPublishedCount(Number(activeRes.pagination.total));
+      } else if (Array.isArray(activeRes?.data)) {
+        setPublishedCount(activeRes.data.length);
+      }
+
+      if (inactiveRes?.pagination?.total !== undefined) {
+        setInactiveCount(Number(inactiveRes.pagination.total));
+      } else if (Array.isArray(inactiveRes?.data)) {
+        setInactiveCount(inactiveRes.data.length);
+      }
     } catch (err) {
       console.error("Fetch products error:", err);
     } finally {
@@ -212,7 +266,7 @@ export default function AllProductsPage() {
   useEffect(() => {
     fetchMainCategoriesList();
     fetchSubcategoriesList();
-    fetchProducts();
+    fetchProducts(1, perPage);
   }, []);
 
   // Calculate Subcategory list based on selected Main Category in Filter bar
@@ -259,11 +313,11 @@ export default function AllProductsPage() {
 
   // Statistics Summary Counts
   const stats = useMemo(() => {
-    const total = products.length;
-    const published = products.filter((p) => p.status === "active").length;
-    const inactive = products.filter((p) => p.status === "inactive").length;
+    const total = paginationInfo.total > 0 ? paginationInfo.total : products.length;
+    const published = publishedCount !== null ? publishedCount : products.filter((p) => p.status === "active").length;
+    const inactive = inactiveCount !== null ? inactiveCount : products.filter((p) => p.status === "inactive").length;
     return { total, published, drafts: 0, inactive };
-  }, [products]);
+  }, [products, paginationInfo.total, publishedCount, inactiveCount]);
 
   // Reset Filters
   const handleClearFilters = () => {
@@ -291,19 +345,21 @@ export default function AllProductsPage() {
   // Open Drawer for Create
   const handleOpenCreateDrawer = () => {
     setEditingProduct(null);
-    const defaultMainName = mainCategoriesList.length > 0 ? mainCategoriesList[0].name : "Accelerators";
+    const defaultMainObj = mainCategoriesList.length > 0 ? mainCategoriesList[0] : null;
+    const nextOrder = (paginationInfo.total > 0 ? paginationInfo.total : products.length) + 1;
 
     setFormData({
       name: "",
       slug: "",
+      mainCategoryId: defaultMainObj ? defaultMainObj.id : "",
+      mainCategory: defaultMainObj ? defaultMainObj.name : "",
       subcategoryId: "",
       subcategory: "—",
-      mainCategory: defaultMainName,
       shortDescription: "",
       fullDescription: "",
       applications: "",
       status: "active",
-      displayOrder: products.length + 1,
+      displayOrder: nextOrder,
       seoTitle: "",
       seoDescription: "",
     });
@@ -314,12 +370,19 @@ export default function AllProductsPage() {
   // Open Drawer for Edit
   const handleOpenEditDrawer = (product: ProductItem) => {
     setEditingProduct(product);
+    const matchedCategory = mainCategoriesList.find(
+      (c) => String(c.id) === String(product.mainCategoryId) || c.name === product.mainCategory
+    );
+    const mainCatId = product.mainCategoryId || (matchedCategory ? matchedCategory.id : (mainCategoriesList[0]?.id || ""));
+    const mainCatName = product.mainCategory || (matchedCategory ? matchedCategory.name : (mainCategoriesList[0]?.name || ""));
+
     setFormData({
       name: product.name,
       slug: product.slug,
+      mainCategoryId: mainCatId,
+      mainCategory: mainCatName,
       subcategoryId: product.subcategoryId || "",
       subcategory: product.subcategory || "—",
-      mainCategory: product.mainCategory || (mainCategoriesList.length > 0 ? mainCategoriesList[0].name : ""),
       shortDescription: product.shortDescription,
       fullDescription: product.fullDescription,
       applications: product.applications || "",
@@ -334,6 +397,14 @@ export default function AllProductsPage() {
 
   // Subcategory Change Handler in Form
   const handleFormSubcategoryChange = (subIdVal: string | number) => {
+    if (!subIdVal) {
+      setFormData((prev) => ({
+        ...prev,
+        subcategoryId: "",
+        subcategory: "—",
+      }));
+      return;
+    }
     const subObj = subcategoriesList.find((s) => String(s.id) === String(subIdVal));
     setFormData((prev) => ({
       ...prev,
@@ -356,7 +427,7 @@ export default function AllProductsPage() {
     }));
   };
 
-  // Save Product Handler (Sends exact 11 fields required by backend API)
+  // Save Product Handler (Sends exact fields required by backend API)
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -365,7 +436,18 @@ export default function AllProductsPage() {
       const payload = new FormData();
       payload.append("name", formData.name);
       payload.append("slug", formData.slug || formData.name.toLowerCase().replace(/\s+/g, "-"));
-      payload.append("product_subcategory_id", String(formData.subcategoryId || 1));
+      
+      // Send product_category_id (Main Category - Required by backend API)
+      const catId = formData.mainCategoryId || (mainCategoriesList.find((c) => c.name === formData.mainCategory)?.id) || (mainCategoriesList[0]?.id);
+      if (catId) {
+        payload.append("product_category_id", String(catId));
+      }
+
+      // Send product_subcategory_id (Subcategory - Optional)
+      if (formData.subcategoryId) {
+        payload.append("product_subcategory_id", String(formData.subcategoryId));
+      }
+
       payload.append("short_description", formData.shortDescription || "");
       payload.append("description", formData.fullDescription || "");
       payload.append("applications", formData.applications || "");
@@ -887,15 +969,24 @@ export default function AllProductsPage() {
           <div className="px-5 py-3.5 border-t border-[#E5E7EB] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#718096]">
             <div className="flex items-center gap-3">
               <span>
-                Showing 1 to {filteredProducts.length} of {products.length} products
+                Showing {paginationInfo.total === 0 ? 0 : (paginationInfo.currentPage - 1) * paginationInfo.perPage + 1} to {Math.min(paginationInfo.currentPage * paginationInfo.perPage, paginationInfo.total)} of {paginationInfo.total} products
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400">|</span>
                 <span>Rows per page:</span>
-                <select className="bg-[#F3F5F6] text-xs font-medium text-[#172126] px-2 py-1 rounded-md outline-hidden border border-[#E5E7EB] cursor-pointer">
-                  <option>10</option>
-                  <option>25</option>
-                  <option>50</option>
+                <select
+                  value={perPage}
+                  onChange={(e) => {
+                    const newLimit = Number(e.target.value);
+                    setPerPage(newLimit);
+                    setCurrentPage(1);
+                    fetchProducts(1, newLimit);
+                  }}
+                  className="bg-[#F3F5F6] text-xs font-medium text-[#172126] px-2 py-1 rounded-md outline-hidden border border-[#E5E7EB] cursor-pointer"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
                 </select>
               </div>
             </div>
@@ -903,17 +994,52 @@ export default function AllProductsPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="p-1.5 border border-[#E5E7EB] rounded-md hover:bg-[#F8FAFA] disabled:opacity-50 cursor-pointer"
-                disabled
+                onClick={() => {
+                  if (currentPage > 1) {
+                    const prevP = currentPage - 1;
+                    setCurrentPage(prevP);
+                    fetchProducts(prevP, perPage);
+                  }
+                }}
+                disabled={currentPage <= 1 || isLoading}
+                className="p-1.5 border border-[#E5E7EB] rounded-md hover:bg-[#F8FAFA] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                title="Previous page"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="px-3 py-1 bg-[#980e27] text-white font-semibold rounded-md">
-                1
-              </span>
+
+              {Array.from({ length: paginationInfo.lastPage }, (_, i) => i + 1).map((pNum) => (
+                <button
+                  key={pNum}
+                  type="button"
+                  onClick={() => {
+                    if (pNum !== currentPage) {
+                      setCurrentPage(pNum);
+                      fetchProducts(pNum, perPage);
+                    }
+                  }}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                    pNum === currentPage
+                      ? "bg-[#980e27] text-white"
+                      : "bg-white text-[#172126] border border-[#E5E7EB] hover:bg-[#F8FAFA]"
+                  }`}
+                >
+                  {pNum}
+                </button>
+              ))}
+
               <button
                 type="button"
-                className="p-1.5 border border-[#E5E7EB] rounded-md hover:bg-[#F8FAFA] cursor-pointer"
+                onClick={() => {
+                  if (currentPage < paginationInfo.lastPage) {
+                    const nextP = currentPage + 1;
+                    setCurrentPage(nextP);
+                    fetchProducts(nextP, perPage);
+                  }
+                }}
+                disabled={currentPage >= paginationInfo.lastPage || isLoading}
+                className="p-1.5 border border-[#E5E7EB] rounded-md hover:bg-[#F8FAFA] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                title="Next page"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -1005,11 +1131,12 @@ export default function AllProductsPage() {
                         setFormData((prev) => ({
                           ...prev,
                           mainCategory: selectedCatName,
+                          mainCategoryId: catObj ? catObj.id : "",
                           subcategoryId: "",
                           subcategory: "—",
                         }));
                       }}
-                      className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#087F5B] focus:ring-2 focus:ring-[#087F5B]/20 cursor-pointer"
+                      className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#980e27] focus:ring-2 focus:ring-[#980e27]/20 cursor-pointer"
                     >
                       {mainCategoriesList.length === 0 ? (
                         <option value="">No categories available</option>
@@ -1031,7 +1158,7 @@ export default function AllProductsPage() {
                     <select
                       value={formData.subcategoryId}
                       onChange={(e) => handleFormSubcategoryChange(e.target.value)}
-                      className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#087F5B] focus:ring-2 focus:ring-[#087F5B]/20 cursor-pointer"
+                      className="w-full h-10 px-3 bg-white text-sm text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#980e27] focus:ring-2 focus:ring-[#980e27]/20 cursor-pointer"
                     >
                       {(() => {
                         const available = subcategoriesList.filter(
@@ -1142,39 +1269,7 @@ export default function AllProductsPage() {
                   />
                 </div>
 
-                {/* SEO Settings */}
-                <div className="p-4 rounded-xl bg-[#F8FAFA] border border-[#E5E7EB] space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-bold text-[#172126] uppercase tracking-wider">
-                    <Globe className="w-4 h-4 text-[#980e27]" />
-                    <span>SEO Settings</span>
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-semibold text-[#718096] uppercase">
-                      SEO Title
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.seoTitle}
-                      onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
-                      placeholder="VULCURE MBT | Merchem"
-                      className="w-full h-9 px-3 bg-white text-xs text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] font-semibold text-[#718096] uppercase">
-                      SEO Meta Description
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={formData.seoDescription}
-                      onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
-                      placeholder="Product information for VULCURE MBT."
-                      className="w-full p-2.5 bg-white text-xs text-[#172126] rounded-md border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
-                    />
-                  </div>
-                </div>
 
                 {/* Status & Display Order */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

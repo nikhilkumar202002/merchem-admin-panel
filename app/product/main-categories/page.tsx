@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   Info,
   Loader2,
+  Package,
 } from "lucide-react";
 
 export interface MainCategoryItem {
@@ -39,6 +40,7 @@ export interface MainCategoryItem {
   shortDescription?: string;
   description: string;
   subcategoryCount: number;
+  productsCount: number;
   status: "Active" | "Inactive";
   createdAt: string;
   image?: string | null;
@@ -95,7 +97,8 @@ export default function MainCategoriesPage() {
           slug: item.slug,
           shortDescription: item.short_description || "",
           description: item.description || item.short_description || "",
-          subcategoryCount: item.subcategories_count || 0,
+          subcategoryCount: item.subcategories_count !== undefined ? item.subcategories_count : (Array.isArray(item.subcategories) ? item.subcategories.length : 0),
+          productsCount: item.products_count !== undefined ? item.products_count : (Array.isArray(item.products) ? item.products.length : 0),
           status:
             item.status === "active" || item.status === "Active"
               ? "Active"
@@ -566,6 +569,11 @@ export default function MainCategoriesPage() {
                       Subcategories
                     </th>
 
+                    {/* Products Count */}
+                    <th className="py-3.5 px-5 text-xs font-semibold text-[#718096] uppercase tracking-wider text-center">
+                      Products
+                    </th>
+
                     {/* Status */}
                     <th className="py-3.5 px-5 text-xs font-semibold text-[#718096] uppercase tracking-wider text-center">
                       Status
@@ -656,6 +664,20 @@ export default function MainCategoriesPage() {
                           >
                             <FolderTree className="w-3.5 h-3.5" />
                             <span>{item.subcategoryCount} subs</span>
+                          </Link>
+                        </td>
+
+                        {/* Clickable Products Badge */}
+                        <td className="py-4 px-5 text-center">
+                          <Link
+                            href={`/product/all-products?category=${encodeURIComponent(
+                              item.name
+                            )}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F8FAFC] hover:bg-[#172126] text-[#475569] hover:text-white border border-[#E5E7EB] text-xs font-semibold transition-all cursor-pointer"
+                            title="Click to view products"
+                          >
+                            <Package className="w-3.5 h-3.5" />
+                            <span>{item.productsCount} prods</span>
                           </Link>
                         </td>
 
