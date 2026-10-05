@@ -11,6 +11,7 @@ import {
   createProductCategoryApi,
   updateProductCategoryApi,
   deleteProductCategoryApi,
+  formatStorageUrl,
 } from "../../utils/product";
 import {
   Layers,
@@ -89,8 +90,15 @@ export default function MainCategoriesPage() {
     setApiError("");
     try {
       const res = await getProductCategoriesApi();
-      const rawData = res.data || res;
-      if (Array.isArray(rawData)) {
+      const rawData = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.data?.data)
+        ? res.data.data
+        : [];
+
+      if (Array.isArray(rawData) && rawData.length >= 0) {
         const mapped: MainCategoryItem[] = rawData.map((item: any, idx: number) => ({
           id: item.id,
           order: item.sort_order || idx + 1,
@@ -107,13 +115,7 @@ export default function MainCategoriesPage() {
           createdAt: item.created_at
             ? new Date(item.created_at).toLocaleDateString()
             : "—",
-          image: item.image_url
-            ? item.image_url
-            : item.image
-            ? item.image.startsWith("http")
-              ? item.image
-              : `https://api.merchem.com/storage/${item.image}`
-            : null,
+          image: formatStorageUrl(item.image_url || item.image || item.image_path),
         }));
         setCategories(mapped);
       }
@@ -616,7 +618,7 @@ export default function MainCategoriesPage() {
                           <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#E5E7EB] bg-[#F8FAFA] flex items-center justify-center mx-auto shrink-0 shadow-2xs relative">
                             {item.image ? (
                               <img
-                                src={item.image}
+                                src={formatStorageUrl(item.image) || item.image}
                                 alt={item.name}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {

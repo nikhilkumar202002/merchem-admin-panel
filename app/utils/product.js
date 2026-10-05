@@ -347,3 +347,28 @@ export const deleteProductTdsApi = async (productId) => {
     throw error.response?.data || error;
   }
 };
+
+/**
+ * Formats image or document storage URLs cleanly to full HTTPS URLs.
+ * Handles null/undefined, relative paths, storage/ prefixes, and localhost/127.0.0.1 replacement.
+ */
+export const formatStorageUrl = (rawUrlOrPath) => {
+  if (!rawUrlOrPath) return null;
+  let path = String(rawUrlOrPath).trim();
+  if (!path) return null;
+
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.merchem.com/api";
+  const domainOrigin = apiBase.replace(/\/api\/?$/, "");
+
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path.replace(/^(https?:\/\/[^\/]+)/, domainOrigin);
+  }
+
+  path = path.replace(/^\/+/, "");
+
+  if (path.startsWith("storage/")) {
+    return `${domainOrigin}/${path}`;
+  }
+
+  return `${domainOrigin}/storage/${path}`;
+};

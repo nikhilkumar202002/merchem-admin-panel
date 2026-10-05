@@ -17,7 +17,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
-import { getProductByIdApi } from "../../utils/product";
+import { getProductByIdApi, formatStorageUrl } from "../../utils/product";
 
 export interface ProductViewProps {
   productId?: number | string | null;
@@ -147,11 +147,9 @@ const ProductView: React.FC<ProductViewProps> = ({
     initialProductData?.tds_uploaded_at ||
     null;
 
-  const tdsUrl =
-    tdsObj?.url ||
-    (product?.tds_document
-      ? `https://api.merchem.com/storage/${product.tds_document}`
-      : null);
+  const tdsUrl = formatStorageUrl(
+    tdsObj?.url || product?.tds_document_url || product?.tds_document
+  );
 
   // SEO details
   const seoTitle =

@@ -16,6 +16,7 @@ import {
   updateProductApi,
   deleteProductApi,
   deleteProductTdsApi,
+  formatStorageUrl,
 } from "../../utils/product";
 import {
   Package,
@@ -225,8 +226,15 @@ export default function AllProductsPage() {
         getProductsApi({ status: "inactive", per_page: 1 }).catch(() => null),
       ]);
 
-      const rawData = res.data || res;
-      if (Array.isArray(rawData)) {
+      const rawData = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.data?.data)
+        ? res.data.data
+        : [];
+
+      if (Array.isArray(rawData) && rawData.length >= 0) {
         const mapped: ProductItem[] = rawData.map((item: any, idx: number) => ({
           id: item.id,
           name: item.name,
@@ -252,13 +260,7 @@ export default function AllProductsPage() {
             ? new Date(item.updated_at).toLocaleDateString()
             : "—",
           displayOrder: item.sort_order || idx + 1,
-          image: item.image_url
-            ? item.image_url
-            : item.image
-            ? item.image.startsWith("http")
-              ? item.image
-              : `https://api.merchem.com/storage/${item.image}`
-            : null,
+          image: formatStorageUrl(item.image_url || item.image || item.image_path),
           seoTitle: item.seo_title || "",
           seoDescription: item.seo_description || "",
           tds_document: item.tds_document || null,

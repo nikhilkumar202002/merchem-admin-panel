@@ -13,6 +13,7 @@ import {
   createProductSubcategoryApi,
   updateProductSubcategoryApi,
   deleteProductSubcategoryApi,
+  formatStorageUrl,
 } from "../../utils/product";
 import {
   FolderTree,
@@ -111,8 +112,15 @@ function SubcategoriesContent() {
     setIsLoading(true);
     try {
       const res = await getProductSubcategoriesApi();
-      const rawData = res.data || res;
-      if (Array.isArray(rawData)) {
+      const rawData = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.data?.data)
+        ? res.data.data
+        : [];
+
+      if (Array.isArray(rawData) && rawData.length >= 0) {
         const mapped: SubcategoryItem[] = rawData.map((item: any, idx: number) => ({
           id: item.id,
           order: item.sort_order || idx + 1,
@@ -130,13 +138,7 @@ function SubcategoriesContent() {
           createdAt: item.created_at
             ? new Date(item.created_at).toLocaleDateString()
             : "—",
-          image: item.image_url
-            ? item.image_url
-            : item.image
-            ? item.image.startsWith("http")
-              ? item.image
-              : `https://api.merchem.com/storage/${item.image}`
-            : null,
+          image: formatStorageUrl(item.image_url || item.image || item.image_path),
         }));
         setSubcategories(mapped);
       }

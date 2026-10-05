@@ -13,7 +13,7 @@ import {
   FileCheck,
   Calendar,
 } from "lucide-react";
-import { uploadProductTdsApi, deleteProductTdsApi } from "../../utils/product";
+import { uploadProductTdsApi, deleteProductTdsApi, formatStorageUrl } from "../../utils/product";
 
 import DeleteModal from "./DeleteModal";
 
@@ -90,11 +90,9 @@ const ProductTDS: React.FC<ProductTDSProps> = ({
     product.tds_uploaded_at ||
     null;
 
-  const existingUrl =
-    tdsObj?.url ||
-    (product.tds_document
-      ? `https://api.merchem.com/storage/${product.tds_document}`
-      : null);
+  const existingUrl = formatStorageUrl(
+    tdsObj?.url || (product as any).tds_document_url || product.tds_document
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
