@@ -93,7 +93,7 @@ const ProductTDS: React.FC<ProductTDSProps> = ({
   const existingUrl =
     tdsObj?.url ||
     (product.tds_document
-      ? `http://127.0.0.1:8000/storage/${product.tds_document}`
+      ? `https://api.merchem.com/storage/${product.tds_document}`
       : null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -112,7 +112,7 @@ export default function MainCategoriesPage() {
             : item.image
             ? item.image.startsWith("http")
               ? item.image
-              : `http://127.0.0.1:8000/storage/${item.image}`
+              : `https://api.merchem.com/storage/${item.image}`
             : null,
         }));
         setCategories(mapped);
