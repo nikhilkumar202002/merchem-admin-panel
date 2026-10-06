@@ -1,0 +1,85 @@
+# =====================================================================
+# Apache & LiteSpeed .htaccess for Next.js Static Export (trailingSlash: true)
+# Fixes Next.js Client-Side 404 Error, Routing, Pagination & Data Fetching
+# Place this file in your project's "public/.htaccess" directory.
+# =====================================================================
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Serve index.html automatically for directory requests (e.g. /login/ -> /login/index.html)
+  DirectoryIndex index.html
+
+  # -------------------------------------------------------------------
+  # 1. Serve Existing Files Directly (JS, CSS, Images, index.html, etc.)
+  # -------------------------------------------------------------------
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # -------------------------------------------------------------------
+  # 2. Redirect non-trailing slash URLs to trailing slash
+  # e.g., /login -> /login/ or /product/all-products -> /product/all-products/
+  # Next.js static export with trailingSlash: true exports pages into folders
+  # -------------------------------------------------------------------
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_URI} !^/_next/
+  RewriteCond %{REQUEST_URI} !/$
+  RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]+$
+  RewriteRule ^(.*)$ /$1/ [R=301,L]
+
+  # -------------------------------------------------------------------
+  # 3. Handle Next.js client router data requests (.txt files)
+  # Maps /path.txt -> /path/index.txt (e.g., /login.txt -> /login/index.txt)
+  # -------------------------------------------------------------------
+  RewriteCond %{REQUEST_URI} ^/(.+)\.txt$
+  RewriteRule ^(.+)\.txt$ /$1/index.txt [L]
+
+  # -------------------------------------------------------------------
+  # 4. Fallback to /404.html for non-existent pages
+  # -------------------------------------------------------------------
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ /404.html [L]
+
+</IfModule>
+
+# Custom 404 Error Document
+ErrorDocument 404 /404.html
+
+# Prevent Directory Index Browsing
+Options -Indexes
+
+# Security & Hidden File Protection
+<FilesMatch "^\.">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# -------------------------------------------------------------------
+# Performance & Caching
+# -------------------------------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/x-javascript application/json
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresDefault "access plus 1 month"
+
+  # HTML pages - no cache to ensure update freshness
+  ExpiresByType text/html "access plus 0 seconds"
+
+  # Static assets
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>
