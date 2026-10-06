@@ -91,8 +91,10 @@ const Header: React.FC<HeaderProps> = ({
     if (isAuthenticated()) {
       getMeApi()
         .then((res: any) => {
-          const u = res.user || res.data?.user || res;
-          if (u) setCurrentUser(u);
+          const u = res?.data?.user || res?.user || res?.data || res;
+          if (u && typeof u === "object" && (u.name || u.email)) {
+            setCurrentUser(u);
+          }
         })
         .catch(() => {
           // Silent fallback

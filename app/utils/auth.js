@@ -90,9 +90,11 @@ export const getMeApi = async () => {
   try {
     const response = await api.get("/v1/auth/me");
     const data = response.data;
-    const user = data.user || data?.data?.user || data;
-    if (user) {
+    const user = data.data?.user || data.user || data.data || data;
+    if (user && typeof user === "object" && user.name) {
       setStoredUser(user);
+    } else if (data.data && typeof data.data === "object") {
+      setStoredUser(data.data);
     }
     return data;
   } catch (error) {

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
 import { createBlogApi } from "../../utils/blog";
+import { getStoredUser, getMeApi } from "../../utils/auth";
 import {
   FileText,
   Heading2,
@@ -31,10 +32,28 @@ import {
   Send,
   AlertCircle,
   Loader2,
+  Lock,
 } from "lucide-react";
 
 export default function AddBlogPage() {
   const router = useRouter();
+
+  // Logged-in User State
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const user = getStoredUser();
+    if (user) {
+      setCurrentUser(user);
+    } else {
+      getMeApi()
+        .then((res: any) => {
+          const userObj = res?.user || res?.data?.user || res?.data || res;
+          if (userObj) setCurrentUser(userObj);
+        })
+        .catch(() => null);
+    }
+  }, []);
 
   // Form State
   const [title, setTitle] = useState("");
@@ -49,7 +68,6 @@ export default function AddBlogPage() {
 
   // Publishing Settings State
   const [status, setStatus] = useState<"Draft" | "Published" | "Scheduled">("Published");
-  const [author, setAuthor] = useState("Nikhil Kumar");
   const [publishDate, setPublishDate] = useState("2026-10-01T10:00");
   const [isFeatured, setIsFeatured] = useState(false);
   const [category, setCategory] = useState("Technical Guide");
@@ -105,6 +123,8 @@ export default function AddBlogPage() {
       formData.append("excerpt", excerpt.trim());
       formData.append("content", content);
       formData.append("status", targetStatus);
+      formData.append("category", category);
+      formData.append("is_featured", isFeatured ? "1" : "0");
 
       if (featuredImageFile) {
         formData.append("featured_image", featuredImageFile);
@@ -498,23 +518,24 @@ export default function AddBlogPage() {
                 </select>
               </div>
 
-              {/* Author Dropdown */}
+              {/* Author (Read-Only display for current logged-in user) */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-[#172126] uppercase tracking-wider">
                   Author
                 </label>
                 <div className="relative flex items-center">
-                  <User className="w-4 h-4 text-[#94A3B8] absolute left-3 pointer-events-none" />
-                  <select
-                    value={author}
-                    onChange={(e) => setAuthor(e.target.value)}
-                    className="w-full h-10 pl-9 pr-3 bg-white text-xs font-medium text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] cursor-pointer"
-                  >
-                    <option value="Nikhil Kumar">Nikhil Kumar (Administrator)</option>
-                    <option value="R&D Technical Team">R&D Technical Team</option>
-                    <option value="Corporate Communications">Corporate Communications</option>
-                  </select>
+                  <User className="w-4 h-4 text-[#980e27] absolute left-3 pointer-events-none" />
+                  <input
+                    type="text"
+                    readOnly
+                    value={currentUser?.name ? `${currentUser.name}${currentUser.email ? ` (${currentUser.email})` : ""}` : "Merchem Admin"}
+                    className="w-full h-10 pl-9 pr-9 bg-[#F8FAFA] text-xs font-semibold text-[#172126] rounded-lg border border-[#DDE3E0] cursor-not-allowed outline-hidden"
+                  />
+                  <Lock className="w-3.5 h-3.5 text-[#94A3B8] absolute right-3 pointer-events-none" />
                 </div>
+                <p className="text-[10px] text-[#718096]">
+                  Automatically assigned to your logged-in account
+                </p>
               </div>
 
               {/* Category Dropdown */}
@@ -527,6 +548,7 @@ export default function AddBlogPage() {
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full h-10 px-3 bg-white text-xs font-medium text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27] cursor-pointer"
                 >
+                  <option value="Technical Papers">Technical Papers</option>
                   <option value="Technical Guide">Technical Guide</option>
                   <option value="Safety & Compliance">Safety & Compliance</option>
                   <option value="R&D Insights">R&D Insights</option>
