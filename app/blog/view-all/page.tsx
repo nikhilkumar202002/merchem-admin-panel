@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
+import { getBlogsApi, deleteBlogApi } from "../../utils/blog";
 import {
   Newspaper,
   CheckCircle2,
@@ -26,10 +27,11 @@ import {
   Calendar,
   User,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 
 export interface BlogItem {
-  id: string;
+  id: string | number;
   title: string;
   slug: string;
   excerpt: string;
@@ -43,77 +45,45 @@ export interface BlogItem {
   views: number;
 }
 
-const initialBlogs: BlogItem[] = [
-  {
-    id: "blog-1",
-    title: "Understanding Rubber Vulcanization Accelerators",
-    slug: "understanding-rubber-vulcanization-accelerators",
-    excerpt: "Comprehensive technical guide on thiazoles, sulfenamides, and dithiocarbamates in rubber compounding.",
-    author: "R&D Technical Team",
-    category: "Technical Guide",
-    status: "Published",
-    isFeatured: true,
-    publicationDate: "28 Sep 2026",
-    lastUpdated: "01 Oct 2026",
-    thumbnail: "/chemical_bg.jpg",
-    views: 1420,
-  },
-  {
-    id: "blog-2",
-    title: "Specialty Chemicals in Latex Applications",
-    slug: "specialty-chemicals-in-latex-applications",
-    excerpt: "Evaluating low-temperature ultra accelerators for latex foam mattresses and medical glove dipping lines.",
-    author: "Nikhil Kumar",
-    category: "Safety & Compliance",
-    status: "Published",
-    isFeatured: false,
-    publicationDate: "20 Sep 2026",
-    lastUpdated: "25 Sep 2026",
-    views: 980,
-  },
-  {
-    id: "blog-3",
-    title: "Improving Rubber Compound Performance",
-    slug: "improving-rubber-compound-performance",
-    excerpt: "Synergistic combinations of antioxidants and antiozonants for extended heat and flex-fatigue life.",
-    author: "Nikhil Kumar",
-    category: "R&D Insights",
-    status: "Draft",
-    isFeatured: false,
-    publicationDate: "14 Sep 2026",
-    lastUpdated: "18 Sep 2026",
-    views: 0,
-  },
-  {
-    id: "blog-4",
-    title: "Merchem Expands Specialty Chemical Manufacturing Capacity",
-    slug: "merchem-expands-manufacturing-capacity",
-    excerpt: "Merchem India Pvt Ltd announces commissioning of new reactor lines dedicated to eco-friendly accelerators.",
-    author: "Corporate Communications",
-    category: "Company News",
-    status: "Published",
-    isFeatured: true,
-    publicationDate: "05 Sep 2026",
-    lastUpdated: "10 Sep 2026",
-    views: 2150,
-  },
-  {
-    id: "blog-5",
-    title: "Sustainable Antioxidants for Tyres & Conveyor Belts",
-    slug: "sustainable-antioxidants-tyres",
-    excerpt: "Next generation non-blooming antioxidant formulations meeting stringent EU environmental standards.",
-    author: "R&D Technical Team",
-    category: "R&D Insights",
-    status: "Scheduled",
-    isFeatured: false,
-    publicationDate: "15 Oct 2026",
-    lastUpdated: "01 Oct 2026",
-    views: 0,
-  },
-];
-
 export default function AllBlogsPage() {
-  const [blogs, setBlogs] = useState<BlogItem[]>(initialBlogs);
+  const [blogs, setBlogs] = useState<BlogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Fetch blogs from backend API
+  const fetchBlogs = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const res: any = await getBlogsApi();
+      const rawData = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      
+      const mapped: BlogItem[] = rawData.map((b: any) => ({
+        id: b.id,
+        title: b.title || "Untitled",
+        slug: b.slug || "",
+        excerpt: b.excerpt || "",
+        author: b.author?.name || "Admin",
+        category: b.category || "Technical",
+        status: b.status?.toLowerCase() === "published" ? "Published" : b.status?.toLowerCase() === "scheduled" ? "Scheduled" : "Draft",
+        isFeatured: Boolean(b.is_featured),
+        publicationDate: b.published_at ? new Date(b.published_at).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' }) : "Not published",
+        lastUpdated: b.updated_at ? new Date(b.updated_at).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' }) : "Recently",
+        thumbnail: b.featured_image_url || b.featured_image || undefined,
+        views: b.views || 0,
+      }));
+      setBlogs(mapped);
+    } catch (err: any) {
+      console.error("Failed to load blogs:", err);
+      setErrorMsg(err.message || "Failed to load blogs from server.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBlogs();
+  }, []);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -122,10 +92,10 @@ export default function AllBlogsPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   // Selection Checkbox States
-  const [selectedBlogIds, setSelectedBlogIds] = useState<string[]>([]);
+  const [selectedBlogIds, setSelectedBlogIds] = useState<(string | number)[]>([]);
 
   // Action Menu & Modal States
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BlogItem | null>(null);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
@@ -176,7 +146,7 @@ export default function AllBlogsPage() {
     }
   };
 
-  const handleSelectRow = (id: string) => {
+  const handleSelectRow = (id: string | number) => {
     setSelectedBlogIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
@@ -200,18 +170,25 @@ export default function AllBlogsPage() {
   };
 
   // Toggle Featured Status Action
-  const handleToggleFeatured = (id: string) => {
+  const handleToggleFeatured = (id: string | number) => {
     setBlogs((prev) =>
       prev.map((b) => (b.id === id ? { ...b, isFeatured: !b.isFeatured } : b))
     );
   };
 
-  // Single Delete Handler
-  const handleConfirmDelete = () => {
+  // Single Delete Handler connected to DELETE /v1/blogs/:id
+  const handleConfirmDelete = async () => {
     if (deleteTarget) {
-      setBlogs((prev) => prev.filter((b) => b.id !== deleteTarget.id));
-      setSelectedBlogIds((prev) => prev.filter((id) => id !== deleteTarget.id));
-      setDeleteTarget(null);
+      try {
+        await deleteBlogApi(deleteTarget.id);
+        setBlogs((prev) => prev.filter((b) => b.id !== deleteTarget.id));
+        setSelectedBlogIds((prev) => prev.filter((id) => id !== deleteTarget.id));
+      } catch (err: any) {
+        console.error("Failed to delete blog:", err);
+        alert(err.message || "Failed to delete blog article.");
+      } finally {
+        setDeleteTarget(null);
+      }
     }
   };
 

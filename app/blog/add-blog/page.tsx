@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "../../component/layout/Layout";
 import BreadCrumbs from "../../component/common/BreadCrumbs";
+import { createBlogApi } from "../../utils/blog";
 import {
   FileText,
   Heading2,
@@ -27,9 +29,13 @@ import {
   X,
   Save,
   Send,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 export default function AddBlogPage() {
+  const router = useRouter();
+
   // Form State
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -38,6 +44,7 @@ export default function AddBlogPage() {
 
   // Featured Image State
   const [featuredImage, setFeaturedImage] = useState<string | null>(null);
+  const [featuredImageFile, setFeaturedImageFile] = useState<File | null>(null);
   const [imageAltText, setImageAltText] = useState("");
 
   // Publishing Settings State
@@ -50,6 +57,7 @@ export default function AddBlogPage() {
   // UI Feedback States
   const [isSaving, setIsSaving] = useState(false);
   const [successAlert, setSuccessAlert] = useState<string | null>(null);
+  const [errorAlert, setErrorAlert] = useState<string | null>(null);
 
   // Auto-generate Slug from Title
   const handleTitleChange = (val: string) => {
@@ -62,29 +70,65 @@ export default function AddBlogPage() {
     setSlug(autoSlug);
   };
 
-  // Simulated Image Drag and Drop Upload
+  // Handle Image Upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setFeaturedImageFile(file);
       const imageUrl = URL.createObjectURL(file);
       setFeaturedImage(imageUrl);
     }
   };
 
-  // Submit Handler
-  const handleSave = (publishMode: boolean) => {
+  // Submit Handler connected to backend POST /v1/blogs API
+  const handleSave = async (publishMode: boolean) => {
     if (!title.trim()) {
       alert("Please enter a blog title.");
       return;
     }
 
+    if (!content.trim()) {
+      alert("Please enter article content.");
+      return;
+    }
+
     setIsSaving(true);
-    setTimeout(() => {
+    setSuccessAlert(null);
+    setErrorAlert(null);
+
+    try {
+      const targetStatus = publishMode ? "published" : "draft";
+
+      const formData = new FormData();
+      formData.append("title", title.trim());
+      formData.append("slug", slug.trim());
+      formData.append("excerpt", excerpt.trim());
+      formData.append("content", content);
+      formData.append("status", targetStatus);
+
+      if (featuredImageFile) {
+        formData.append("featured_image", featuredImageFile);
+      }
+
+      const res: any = await createBlogApi(formData);
+
+      if (res?.success || res?.data) {
+        const actionText = publishMode ? "published successfully!" : "saved as draft!";
+        setSuccessAlert(`Blog article "${title}" ${actionText}`);
+        setTimeout(() => {
+          router.push("/blog/view-all");
+        }, 1500);
+      } else {
+        setErrorAlert(res?.message || "Failed to create blog article.");
+      }
+    } catch (err: any) {
+      const errorMsg =
+        err?.message ||
+        (err?.errors ? Object.values(err.errors).flat().join(", ") : "An error occurred while saving the blog.");
+      setErrorAlert(String(errorMsg));
+    } finally {
       setIsSaving(false);
-      const actionText = publishMode ? "published successfully!" : "saved as draft!";
-      setSuccessAlert(`Blog article "${title}" ${actionText}`);
-      setTimeout(() => setSuccessAlert(null), 4000);
-    }, 800);
+    }
   };
 
   return (
@@ -146,6 +190,23 @@ export default function AddBlogPage() {
               type="button"
               onClick={() => setSuccessAlert(null)}
               className="p-1 text-[#166534] hover:bg-[#DCFCE7] rounded-md"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Error Alert Feedback */}
+        {errorAlert && (
+          <div className="p-4 rounded-xl bg-[#FEF2F2] border border-[#FCA5A5] text-[#991B1B] flex items-center justify-between animate-in fade-in duration-200">
+            <div className="flex items-center gap-3 text-sm font-semibold">
+              <AlertCircle className="w-5 h-5 text-[#DC2626]" />
+              <span>{errorAlert}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorAlert(null)}
+              className="p-1 text-[#991B1B] hover:bg-[#FEE2E2] rounded-md"
             >
               <X className="w-4 h-4" />
             </button>
