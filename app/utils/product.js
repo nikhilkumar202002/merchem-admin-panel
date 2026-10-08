@@ -102,6 +102,26 @@ export const deleteProductCategoryApi = async (id) => {
   }
 };
 
+/**
+ * Update Featured Status for Product Main Category
+ * PATCH /v1/product-categories/{id}/featured
+ * @param {number|string} id 
+ * @param {Object|boolean|number} isFeaturedOrData - e.g. { is_featured: 1 } or boolean
+ */
+export const updateProductCategoryFeaturedApi = async (id, isFeaturedOrData) => {
+  try {
+    const payload =
+      typeof isFeaturedOrData === "object" && isFeaturedOrData !== null
+        ? isFeaturedOrData
+        : { is_featured: isFeaturedOrData ? 1 : 0 };
+
+    const response = await api.patch(`/v1/product-categories/${id}/featured`, payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 /* ========================================================================= */
 /* 2. PRODUCT SUBCATEGORIES API ENDPOINTS                                    */
 /* ========================================================================= */
@@ -203,6 +223,26 @@ export const deleteProductSubcategoryApi = async (id) => {
   }
 };
 
+/**
+ * Update Featured Status for Product Subcategory
+ * PATCH /v1/product-subcategories/{id}/featured
+ * @param {number|string} id 
+ * @param {Object|boolean|number} isFeaturedOrData 
+ */
+export const updateProductSubcategoryFeaturedApi = async (id, isFeaturedOrData) => {
+  try {
+    const payload =
+      typeof isFeaturedOrData === "object" && isFeaturedOrData !== null
+        ? isFeaturedOrData
+        : { is_featured: isFeaturedOrData ? 1 : 0 };
+
+    const response = await api.patch(`/v1/product-subcategories/${id}/featured`, payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 /* ========================================================================= */
 /* 3. PRODUCTS API ENDPOINTS                                                 */
 /* ========================================================================= */
@@ -298,6 +338,26 @@ export const updateProductApi = async (id, data) => {
 export const deleteProductApi = async (id) => {
   try {
     const response = await api.delete(`/v1/products/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Update Featured Status for Chemical Product
+ * PATCH /v1/products/{id}/featured
+ * @param {number|string} id 
+ * @param {Object|boolean|number} isFeaturedOrData 
+ */
+export const updateProductFeaturedApi = async (id, isFeaturedOrData) => {
+  try {
+    const payload =
+      typeof isFeaturedOrData === "object" && isFeaturedOrData !== null
+        ? isFeaturedOrData
+        : { is_featured: isFeaturedOrData ? 1 : 0 };
+
+    const response = await api.patch(`/v1/products/${id}/featured`, payload);
     return response.data;
   } catch (error) {
     throw error.response?.data || error;

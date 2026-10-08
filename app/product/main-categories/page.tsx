@@ -10,6 +10,7 @@ import {
   getProductCategoriesApi,
   createProductCategoryApi,
   updateProductCategoryApi,
+  updateProductCategoryFeaturedApi,
   deleteProductCategoryApi,
   formatStorageUrl,
 } from "../../utils/product";
@@ -32,6 +33,7 @@ import {
   Info,
   Loader2,
   Package,
+  Star,
 } from "lucide-react";
 
 export interface MainCategoryItem {
@@ -46,6 +48,7 @@ export interface MainCategoryItem {
   status: "Active" | "Inactive";
   createdAt: string;
   image?: string | null;
+  isFeatured?: boolean;
 }
 
 const initialCategories: MainCategoryItem[] = [];
@@ -81,6 +84,7 @@ export default function MainCategoriesPage() {
     description: "",
     status: "Active" as "Active" | "Inactive",
     order: 1,
+    isFeatured: false,
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
 
@@ -116,6 +120,7 @@ export default function MainCategoriesPage() {
             ? new Date(item.created_at).toLocaleDateString()
             : "—",
           image: formatStorageUrl(item.image_url || item.image || item.image_path),
+          isFeatured: Boolean(item.is_featured || item.isFeatured || item.featured),
         }));
         setCategories(mapped);
       }
@@ -211,6 +216,35 @@ export default function MainCategoriesPage() {
     }
   };
 
+  // Toggle Featured Status (Star Icon Click Handler)
+  const handleToggleFeatured = async (id: string | number) => {
+    const target = categories.find((c) => c.id === id);
+    if (!target) return;
+
+    const newFeatured = !target.isFeatured;
+    setCategories((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, isFeatured: newFeatured } : item))
+    );
+
+    try {
+      await updateProductCategoryFeaturedApi(id, { is_featured: newFeatured ? 1 : 0 }).catch(() => {
+        const fd = new FormData();
+        fd.append("name", target.name);
+        fd.append("is_featured", newFeatured ? "1" : "0");
+        return updateProductCategoryApi(id, fd);
+      });
+      toast.success(
+        `Main Category "${target.name}" ${newFeatured ? "marked as featured" : "removed from featured"}`
+      );
+    } catch (err) {
+      console.error("Toggle featured status error:", err);
+      toast.error("Failed to update featured status");
+      setCategories((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, isFeatured: target.isFeatured } : item))
+      );
+    }
+  };
+
   // Drawer Open for Create
   const handleOpenCreateDrawer = () => {
     setEditingCategory(null);
@@ -221,6 +255,7 @@ export default function MainCategoriesPage() {
       description: "",
       status: "Active",
       order: categories.length + 1,
+      isFeatured: false,
     });
     setImageFile(null);
     setDrawerError("");
@@ -237,6 +272,7 @@ export default function MainCategoriesPage() {
       description: category.description,
       status: category.status,
       order: category.order,
+      isFeatured: Boolean(category.isFeatured),
     });
     setImageFile(null);
     setDrawerError("");
@@ -277,6 +313,7 @@ export default function MainCategoriesPage() {
       payload.append("description", formData.description || "");
       payload.append("status", formData.status.toLowerCase());
       payload.append("sort_order", String(formData.order));
+      payload.append("is_featured", formData.isFeatured ? "1" : "0");
       if (imageFile) {
         payload.append("image", imageFile);
       }
@@ -582,6 +619,11 @@ export default function MainCategoriesPage() {
                       Status
                     </th>
 
+                    {/* Featured Column */}
+                    <th className="py-3.5 px-4 text-xs font-semibold text-[#718096] uppercase tracking-wider text-center">
+                      Featured
+                    </th>
+
                     {/* Actions */}
                     <th className="py-3.5 px-5 text-xs font-semibold text-[#718096] uppercase tracking-wider text-right">
                       Actions
@@ -701,6 +743,24 @@ export default function MainCategoriesPage() {
                               }`}
                             />
                             {item.status}
+                          </button>
+                        </td>
+
+                        {/* Featured Star Toggle */}
+                        <td className="py-4 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleFeatured(item.id)}
+                            className="p-1.5 rounded-md hover:bg-[#F3F5F6] transition-colors cursor-pointer"
+                            title={item.isFeatured ? "Unmark as featured" : "Mark as featured"}
+                          >
+                            <Star
+                              className={`w-4 h-4 mx-auto transition-colors ${
+                                item.isFeatured
+                                  ? "text-[#980e27] fill-[#980e27]"
+                                  : "text-[#CBD5E1]"
+                              }`}
+                            />
                           </button>
                         </td>
 
@@ -939,6 +999,25 @@ export default function MainCategoriesPage() {
                       className="w-full h-10 px-3.5 bg-white text-sm text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
                     />
                   </div>
+                </div>
+
+                {/* Featured Category Checkbox */}
+                <div className="p-3.5 rounded-lg border border-[#E5E7EB] bg-[#F8FAFA] flex items-center justify-between">
+                  <div>
+                    <label htmlFor="drawer-cat-is-featured" className="text-xs font-semibold text-[#172126] uppercase tracking-wider block cursor-pointer">
+                      Featured Category
+                    </label>
+                    <span className="text-[11px] text-[#718096]">
+                      Pin this category with a star icon for homepage/featured highlights
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="drawer-cat-is-featured"
+                    checked={formData.isFeatured}
+                    onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                    className="w-4 h-4 rounded-xs border-[#DDE3E0] text-[#980e27] focus:ring-[#980e27]/20 accent-[#980e27] cursor-pointer shrink-0"
+                  />
                 </div>
 
                 {/* Drawer Footer Actions */}

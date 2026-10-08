@@ -39,6 +39,7 @@ import {
   Loader2,
   FileUp,
   Eye,
+  Star,
 } from "lucide-react";
 
 // Types
@@ -57,6 +58,7 @@ export interface ProductItem {
   lastUpdated: string;
   displayOrder: number;
   image?: string | null;
+  isFeatured?: boolean;
   seoTitle?: string;
   seoDescription?: string;
   tds_document?: string | null;
@@ -261,6 +263,7 @@ export default function AllProductsPage() {
             : "—",
           displayOrder: item.sort_order || idx + 1,
           image: formatStorageUrl(item.image_url || item.image || item.image_path),
+          isFeatured: Boolean(item.is_featured || item.isFeatured || item.featured),
           seoTitle: item.seo_title || "",
           seoDescription: item.seo_description || "",
           tds_document: item.tds_document || null,
@@ -402,6 +405,33 @@ export default function AllProductsPage() {
     setSelectedProductIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
+  };
+
+  // Toggle Featured Status (Star Icon Handler)
+  const handleToggleFeatured = async (id: string | number) => {
+    const target = products.find((p) => p.id === id);
+    if (!target) return;
+
+    const newFeatured = !target.isFeatured;
+    setProducts((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, isFeatured: newFeatured } : item))
+    );
+
+    try {
+      const fd = new FormData();
+      fd.append("name", target.name);
+      fd.append("is_featured", newFeatured ? "1" : "0");
+      await updateProductApi(id, fd);
+      toast.success(
+        `Product "${target.name}" ${newFeatured ? "marked as featured" : "removed from featured"}`
+      );
+    } catch (err) {
+      console.error("Toggle product featured status error:", err);
+      toast.error("Failed to update featured status");
+      setProducts((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, isFeatured: target.isFeatured } : item))
+      );
+    }
   };
 
   // Open Single View Modal using ProductView component
@@ -895,6 +925,9 @@ export default function AllProductsPage() {
                     <th className="py-3.5 px-5 text-xs font-semibold text-[#718096] uppercase tracking-wider">
                       Status
                     </th>
+                    <th className="py-3.5 px-4 text-xs font-semibold text-[#718096] uppercase tracking-wider text-center">
+                      Featured
+                    </th>
                     <th className="py-3.5 px-5 text-xs font-semibold text-[#718096] uppercase tracking-wider">
                       TDS Document
                     </th>
@@ -999,6 +1032,24 @@ export default function AllProductsPage() {
                           >
                             {item.status === "active" ? "Active" : "Inactive"}
                           </span>
+                        </td>
+
+                        {/* Featured Star Toggle */}
+                        <td className="py-4 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleFeatured(item.id)}
+                            className="p-1.5 rounded-md hover:bg-[#F3F5F6] transition-colors cursor-pointer"
+                            title={item.isFeatured ? "Unmark as featured" : "Mark as featured"}
+                          >
+                            <Star
+                              className={`w-4 h-4 mx-auto transition-colors ${
+                                item.isFeatured
+                                  ? "text-[#980e27] fill-[#980e27]"
+                                  : "text-[#CBD5E1]"
+                              }`}
+                            />
+                          </button>
                         </td>
 
                         {/* TDS Document */}

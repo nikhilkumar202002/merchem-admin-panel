@@ -50,7 +50,7 @@ export const createBlogApi = async (data) => {
 
 /**
  * Update an existing blog
- * PATCH /v1/blogs/{id} (or POST /v1/blogs/{id} with _method=PATCH for FormData)
+ * PUT /v1/blogs/{id} (or POST /v1/blogs/{id} with _method=PUT for FormData)
  * 
  * @param {number|string} id - Blog ID
  * @param {Object|FormData} data - Updated blog data
@@ -59,14 +59,14 @@ export const createBlogApi = async (data) => {
 export const updateBlogApi = async (id, data) => {
   try {
     let response;
-    // For FormData uploads, append _method=PATCH and use POST for multipart compatibility
+    // For FormData uploads, append _method=PUT and use POST for multipart compatibility
     if (data instanceof FormData) {
       if (!data.has("_method")) {
-        data.append("_method", "PATCH");
+        data.append("_method", "PUT");
       }
       response = await api.post(`/v1/blogs/${id}`, data);
     } else {
-      response = await api.patch(`/v1/blogs/${id}`, data);
+      response = await api.put(`/v1/blogs/${id}`, data);
     }
     return response.data;
   } catch (error) {

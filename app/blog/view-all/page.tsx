@@ -629,7 +629,7 @@ export default function AllBlogsPage() {
 
                             {/* Edit Link */}
                             <Link
-                              href="/blog/add-blog"
+                              href={`/blog/edit-blog?id=${item.id}`}
                               className="p-1.5 text-[#718096] hover:text-[#980e27] hover:bg-[#FFF5F7] rounded-md transition-colors"
                               title="Edit Blog"
                             >

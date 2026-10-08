@@ -35,6 +35,7 @@ import {
   ArrowUpRight,
   Sliders,
   Loader2,
+  Star,
 } from "lucide-react";
 
 export interface SubcategoryItem {
@@ -50,6 +51,7 @@ export interface SubcategoryItem {
   status: "Active" | "Inactive";
   createdAt: string;
   image?: string | null;
+  isFeatured?: boolean;
 }
 
 const initialSubcategories: SubcategoryItem[] = [];
@@ -88,6 +90,7 @@ function SubcategoriesContent() {
     description: "",
     status: "Active" as "Active" | "Inactive",
     order: 1,
+    isFeatured: false,
   });
 
   // Fetch Main Categories for dropdown select
@@ -139,6 +142,7 @@ function SubcategoriesContent() {
             ? new Date(item.created_at).toLocaleDateString()
             : "—",
           image: formatStorageUrl(item.image_url || item.image || item.image_path),
+          isFeatured: Boolean(item.is_featured || item.isFeatured || item.featured),
         }));
         setSubcategories(mapped);
       }
@@ -235,6 +239,34 @@ function SubcategoriesContent() {
     }
   };
 
+  // Toggle Featured Status (Star Icon Click Handler)
+  const handleToggleFeatured = async (id: string | number) => {
+    const target = subcategories.find((s) => s.id === id);
+    if (!target) return;
+
+    const newFeatured = !target.isFeatured;
+    setSubcategories((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, isFeatured: newFeatured } : item))
+    );
+
+    try {
+      await updateProductSubcategoryApi(id, {
+        product_category_id: target.mainCategoryId,
+        name: target.name,
+        is_featured: newFeatured ? 1 : 0,
+      });
+      toast.success(
+        `Subcategory "${target.name}" ${newFeatured ? "marked as featured" : "removed from featured"}`
+      );
+    } catch (err) {
+      console.error("Toggle subcategory featured status error:", err);
+      toast.error("Failed to update featured status");
+      setSubcategories((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, isFeatured: target.isFeatured } : item))
+      );
+    }
+  };
+
   // Open Drawer for Create
   const handleOpenCreateDrawer = () => {
     setEditingSubcategory(null);
@@ -246,6 +278,7 @@ function SubcategoriesContent() {
       description: "",
       status: "Active",
       order: subcategories.length + 1,
+      isFeatured: false,
     });
     setIsDrawerOpen(true);
   };
@@ -261,6 +294,7 @@ function SubcategoriesContent() {
       description: sub.description,
       status: sub.status,
       order: sub.order,
+      isFeatured: Boolean(sub.isFeatured),
     });
     setIsDrawerOpen(true);
   };
@@ -296,6 +330,7 @@ function SubcategoriesContent() {
       description: formData.description || "",
       status: formData.status.toLowerCase(),
       sort_order: Number(formData.order),
+      is_featured: formData.isFeatured ? 1 : 0,
     };
 
     try {
@@ -592,6 +627,11 @@ function SubcategoriesContent() {
                       Status
                     </th>
 
+                    {/* Featured Column */}
+                    <th className="py-3.5 px-4 text-xs font-semibold text-[#718096] uppercase tracking-wider text-center">
+                      Featured
+                    </th>
+
                     {/* Sort Order */}
                     <th className="py-3.5 px-4 text-xs font-semibold text-[#718096] uppercase tracking-wider text-center">
                       Order
@@ -703,6 +743,24 @@ function SubcategoriesContent() {
                               }`}
                             />
                             {item.status}
+                          </button>
+                        </td>
+
+                        {/* Featured Star Toggle */}
+                        <td className="py-4 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleFeatured(item.id)}
+                            className="p-1.5 rounded-md hover:bg-[#F3F5F6] transition-colors cursor-pointer"
+                            title={item.isFeatured ? "Unmark as featured" : "Mark as featured"}
+                          >
+                            <Star
+                              className={`w-4 h-4 mx-auto transition-colors ${
+                                item.isFeatured
+                                  ? "text-[#980e27] fill-[#980e27]"
+                                  : "text-[#CBD5E1]"
+                              }`}
+                            />
                           </button>
                         </td>
 
@@ -916,6 +974,25 @@ function SubcategoriesContent() {
                       className="w-full h-10 px-3.5 bg-white text-sm text-[#172126] rounded-lg border border-[#DDE3E0] outline-hidden focus:border-[#980e27]"
                     />
                   </div>
+                </div>
+
+                {/* Featured Subcategory Checkbox */}
+                <div className="p-3.5 rounded-lg border border-[#E5E7EB] bg-[#F8FAFA] flex items-center justify-between">
+                  <div>
+                    <label htmlFor="drawer-is-featured" className="text-xs font-semibold text-[#172126] uppercase tracking-wider block cursor-pointer">
+                      Featured Subcategory
+                    </label>
+                    <span className="text-[11px] text-[#718096]">
+                      Pin this subcategory with a star icon for homepage/featured highlights
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="drawer-is-featured"
+                    checked={formData.isFeatured}
+                    onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                    className="w-4 h-4 rounded-xs border-[#DDE3E0] text-[#980e27] focus:ring-[#980e27]/20 accent-[#980e27] cursor-pointer shrink-0"
+                  />
                 </div>
 
                 {/* Drawer Footer Actions */}
